@@ -2,13 +2,23 @@ from fastapi import FastAPI, Request, Response, status
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import TextMessage, MessageEvent, TextSendMessage
-from dotenv import load_dotenv
-import json
 
 import pydantic
 import os
 
-load_dotenv('./.env')
+LINE_BOT_API_TOKEN = os.getenv('LINE_BOT_API_TOKEN')
+LINE_BOT_API_SECRET = os.getenv('LINE_BOT_API_SECRET')
+
+def load_env_file():
+    from dotenv import load_dotenv
+
+    load_dotenv('./.env')
+
+if LINE_BOT_API_TOKEN == None or LINE_BOT_API_SECRET == None:
+    load_env_file()
+    LINE_BOT_API_TOKEN = os.getenv('LINE_BOT_API_TOKEN')
+    LINE_BOT_API_SECRET = os.getenv('LINE_BOT_API_SECRET')
+
 
 class SamplePost(pydantic.BaseModel):
     x: int
@@ -19,6 +29,7 @@ app = FastAPI()
 
 line_bot_api = LineBotApi(os.getenv('LINE_BOT_API_TOKEN'))
 handler = WebhookHandler(os.getenv('LINE_BOT_API_SECRET'))
+
 
 @app.get('/')
 def root():

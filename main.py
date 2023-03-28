@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Request, Response, status
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import TextMessage, MessageEvent, TextSendMessage
+from linebot.models import TextMessage, MessageEvent, ImageSendMessage
+from apis.dall_e.image_model import ImageGenerator, ImageSize
 
 import pydantic
 import os
@@ -55,30 +56,21 @@ async def callback(request: Request):
 
     return Response(status_code=status.HTTP_200_OK)
 
-def reply_message_text(event: MessageEvent):
+def reply_message_image(event: MessageEvent):
     msg_txt = event.message.text
 
     if not msg_txt:
         return
 
-    if msg_txt == 'こんにちは':
-        reply_message = 'Hello.'
-
-    elif msg_txt == 'おはようございます' or msg_txt == 'おはよう':
-        reply_message = 'Good morning.'
-
-    elif msg_txt == 'こんばんは':
-        reply_message = 'Good evening.'
-
-    else:
-        reply_message = 'Hello AI Bot'
+    image_generator = ImageGenerator(image_size=ImageSize(512, 512), prompt=msg_txt)
+    response_url = image_generator.create_image()
 
     line_bot_api.reply_message(
         reply_token=event.reply_token,
-        messages=TextSendMessage(text=reply_message)
+        messages=ImageSendMessage(original_content_url=response_url, preview_image_url=response_url)
     )
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event: MessageEvent):
-    reply_message_text(event)
+    reply_message_image(event)
 

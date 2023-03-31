@@ -1,29 +1,18 @@
 from fastapi import FastAPI, Request, Response, status
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import TextMessage, MessageEvent, ImageSendMessage
+from linebot.models import TextMessage, MessageEvent, ImageSendMessage, TextSendMessage
 from apis.dall_e.image_model import ImageGenerator, ImageSize
 
-import pydantic
 import os
 
 LINE_BOT_API_TOKEN = os.getenv('LINE_BOT_API_TOKEN')
 LINE_BOT_API_SECRET = os.getenv('LINE_BOT_API_SECRET')
 
-def load_env_file():
-    from dotenv import load_dotenv
-
-    load_dotenv('./.env')
-
 if LINE_BOT_API_TOKEN == None or LINE_BOT_API_SECRET == None:
-    load_env_file()
     LINE_BOT_API_TOKEN = os.getenv('LINE_BOT_API_TOKEN')
     LINE_BOT_API_SECRET = os.getenv('LINE_BOT_API_SECRET')
 
-
-class SamplePost(pydantic.BaseModel):
-    x: int
-    y: int
 
 
 app = FastAPI()
@@ -31,16 +20,9 @@ app = FastAPI()
 line_bot_api = LineBotApi(os.getenv('LINE_BOT_API_TOKEN'))
 handler = WebhookHandler(os.getenv('LINE_BOT_API_SECRET'))
 
-
 @app.get('/')
 def root():
-    return {'message': 'hello'}
-
-
-@app.post('/')
-def calc(data: SamplePost):
-    result = data.x * data.y
-    return result
+    return {"message": 'hello'}
 
 @app.post('/callback')
 async def callback(request: Request):
@@ -54,12 +36,15 @@ async def callback(request: Request):
         print('署名に失敗しました')
         raise error
 
-    return Response(status_code=status.HTTP_200_OK)
+    return {"status_code": Response(status_code=status.HTTP_200_OK), "content": body}
 
-def reply_message_image(event: MessageEvent):
+def reply_message(event: MessageEvent):
     msg_txt = event.message.text
 
     if not msg_txt:
+        return
+
+    if not msg_txt == '猫の画像':
         return
 
     image_generator = ImageGenerator(image_size=ImageSize(512, 512), prompt=msg_txt)
@@ -72,5 +57,8 @@ def reply_message_image(event: MessageEvent):
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event: MessageEvent):
-    reply_message_image(event)
+    if event.message.text == '猫の画像':
+        reply_message(event)
+
+    line_bot_api.reply_message(event.reply_token, messages=TextSendMessage(event.message.text))
 

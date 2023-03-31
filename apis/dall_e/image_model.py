@@ -1,25 +1,16 @@
 from openai import Image
-from dotenv import load_dotenv
-import os
-import openai
+from .initialize import open_ai_init
 
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-
-if not OPENAI_API_KEY:
-    load_dotenv('./.env')
-    OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-
-openai.api_key = OPENAI_API_KEY
+open_ai_init()
 
 class ImageUrlNotFoundException(Exception):
     pass
-
 
 class ImageSize:
     def __init__(self, x: int, y: int) -> None:
         self._x = x
         self._y = y
-        self._image_size = f"{self.x}x{self.y}"
+        self._size = f"{self.x}x{self.y}"
         self.image_size_list = ['256x256', '512x512', '1024x1024']
 
     @property
@@ -31,11 +22,14 @@ class ImageSize:
         return self._y
 
     @property
-    def image_size(self):
-        if not self._image_size in self.image_size_list:
+    def size(self):
+        if not self.image_size in self.image_size_list:
             return
 
-        return self._image_size
+        if (self.x == self.y) and (self.image_size in self.image_size_list):
+            return
+
+        return self.image_size
 
 
 class ImageModel:
@@ -58,6 +52,15 @@ class ImageModel:
     @property
     def output_image(self): return self._output_image
 
+    @output_image.setter
+    def set_output_image(self, image: str):
+        if image:
+            if image.split(".")[-1] == "png":
+                self.output_image = image
+                return
+
+        raise ValueError('正しいURLが指定されていません')
+
     @property
     def input_image(self):
         if not self._input_image:
@@ -66,11 +69,13 @@ class ImageModel:
         return self._input_image
 
     @input_image.setter
-    def set_input_image(self, image_name: str):
-        if not image_name.split(".")[-1] == "png":
-            raise ValueError
+    def set_input_image(self, image: str):
+        if image:
+            if image.split(".")[-1] == "png":
+                self.input_image = image
+                return
 
-        self._input_image = image_name
+        raise ValueError('正しいURLが指定されていません')
 
 
 class ImageGenerator(ImageModel):
@@ -87,11 +92,7 @@ class ImageGenerator(ImageModel):
             size=self.image_size
         )
 
-        response_url = response['data'][0]['url']
-        if not response_url:
-            raise ImageUrlNotFoundException('This url is not found.')
-
-        print('Image generation is complete!!')
+        response_url = self._get_response_url(response)
 
         return response_url
 
@@ -101,10 +102,13 @@ class ImageGenerator(ImageModel):
             n=n,
             size=self.image_size
         )
-        response_url = response['data'][0]['url']
-        if not response_url:
-            raise ImageUrlNotFoundException('This url is not found.')
+        response_url = self._get_response_url(response)
 
         print('Image generation is complete!!')
 
         return response_url
+
+    def _get_response_url(self, response):
+        response_url = response['data'][0]['url']
+        if not response_url:
+            raise ImageUrlNotFoundException('This url is not found.')

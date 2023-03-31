@@ -4,7 +4,6 @@ from linebot.models import TextMessage, MessageEvent, TextSendMessage
 from main import app, handle_message
 from dotenv import load_dotenv
 from pytest_mock import MockerFixture
-import os
 import json
 
 load_dotenv('./.env')

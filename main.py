@@ -14,7 +14,6 @@ if LINE_BOT_API_TOKEN == None or LINE_BOT_API_SECRET == None:
     LINE_BOT_API_SECRET = os.getenv('LINE_BOT_API_SECRET')
 
 
-
 app = FastAPI()
 
 line_bot_api = LineBotApi(os.getenv('LINE_BOT_API_TOKEN'))

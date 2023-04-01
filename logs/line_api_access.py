@@ -1,8 +1,16 @@
+from email.gmail_handler import GmailSender
+from dotenv import load_dotenv
 import logging
 import os
 
+load_dotenv('./.env')
 
 class LineApiAccessLogger:
+
+    APPLICATION_BOT_EMAIL = os.getenv('APPLICATION_BOT_EMAIL')
+    APPLICATION_BOT_PASSWORD = os.getenv('APPLICATION_BOT_PASSWORD')
+    APPLICATION_ROOT_EMAIL = os.getenv('APPLICATION_ROOT_EMAIL')
+
     def __init__(self, level: int = logging.INFO, file_output: bool = True, console: bool = True, send_email: bool = False) -> None:
         self.level = level
         self.file_output = file_output
@@ -15,9 +23,37 @@ class LineApiAccessLogger:
         self.file_handler.setFormatter(self.format)
         self.stream_handler.setFormatter(self.format)
         self.logger = logging.getLogger(__name__)
+        self._logger_init()
+
+    def logger_output(self, message: str):
+        if self.level == logging.INFO:
+            self.logger.info(message)
+
+        elif self.level == logging.DEBUG:
+            self.logger.debug(message)
+
+        elif self.level == logging.ERROR:
+            self.logger.error(message)
+
+        else:
+            raise ValueError('ログレベルを適切に指定してください')
+
+        if not self.send_email: return
+        self._send_email(message)
 
 
-    def message_handler(self, message: str):
+    def _send_email(self, msg: str):
+        if not self.send_email: return
+
+        gmail_handler = GmailSender(
+            email=self.APPLICATION_BOT_EMAIL,
+            password=self.APPLICATION_BOT_PASSWORD,
+            root_email=self.APPLICATION_ROOT_EMAIL
+            )
+
+        gmail_handler.send_gmail(msg)
+
+    def _logger_init(self):
         self.logger.setLevel(self.level)
 
         if self.file_output:
@@ -25,12 +61,6 @@ class LineApiAccessLogger:
 
         if self.console:
             self.logger.addHandler(self.stream_handler)
-
-        self.logger.info(message)
-
-    def send_email(self, error_msg: str):
-        pass
-
 
 class LoggerInfo(LineApiAccessLogger):
     def __init__(self, level: int = logging.INFO, file_output: bool = True, console: bool = True, send_email: bool = False) -> None:
@@ -57,7 +87,6 @@ class LoggerError(LineApiAccessLogger):
         self.file_output = True
         self.console = True
         self.send_email = True
-
 
 
 

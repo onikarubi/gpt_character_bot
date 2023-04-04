@@ -1,4 +1,4 @@
-from email.gmail_handler import GmailSender
+from .email.gmail_handler import GmailSender
 from dotenv import load_dotenv
 import logging
 import os
@@ -11,12 +11,12 @@ class LineApiAccessLogger:
     APPLICATION_BOT_PASSWORD = os.getenv('APPLICATION_BOT_PASSWORD')
     APPLICATION_ROOT_EMAIL = os.getenv('APPLICATION_ROOT_EMAIL')
 
-    def __init__(self, level: int = logging.INFO, file_output: bool = True, console: bool = True, send_email: bool = False) -> None:
+    def __init__(self, level: int, file_output: bool = True, console: bool = True, send_email: bool = False) -> None:
         self.level = level
         self.file_output = file_output
         self.console = console
         self.send_email = send_email
-        self.log_file = os.path.json('logs', "line_api_access.log")
+        self.log_file = os.path.join('logs', "line_api_access.log")
         self.file_handler = logging.FileHandler(self.log_file)
         self.stream_handler = logging.StreamHandler()
         self.format = logging.Formatter('%(levelname)s: %(message)s')
@@ -62,32 +62,47 @@ class LineApiAccessLogger:
         if self.console:
             self.logger.addHandler(self.stream_handler)
 
+
 class LoggerInfo(LineApiAccessLogger):
     def __init__(self, level: int = logging.INFO, file_output: bool = True, console: bool = True, send_email: bool = False) -> None:
         super().__init__(level, file_output, console, send_email)
-        self.level = logging.INFO
+        self.level = level
         self.console = True
         self.file_output = True
         self.send_email = False
 
 
 class LoggerDebug(LineApiAccessLogger):
-    def __init__(self, level: int = logging.INFO, file_output: bool = True, console: bool = True, send_email: bool = False) -> None:
+    def __init__(self, level: int = logging.DEBUG, file_output: bool = True, console: bool = True, send_email: bool = False) -> None:
         super().__init__(level, file_output, console, send_email)
-        self.level = logging.DEBUG
+        self.level = level
         self.console = True
         self.file_output = False
         self.send_email = False
 
 
 class LoggerError(LineApiAccessLogger):
-    def __init__(self, level: int = logging.INFO, file_output: bool = True, console: bool = True, send_email: bool = False) -> None:
+    def __init__(self, level: int = logging.ERROR, file_output: bool = True, console: bool = True, send_email: bool = False) -> None:
         super().__init__(level, file_output, console, send_email)
-        self.level = logging.ERROR
+        self.level = level
         self.file_output = True
         self.console = True
         self.send_email = True
 
 
+def line_logger_output(level: str = '', message: str = ''):
+    if not level or not message: return
+    if not level in ['info', 'debug', 'error']:
+        return
 
+    if level == 'info':
+        logger = LoggerInfo()
+
+    elif level == 'debug':
+        logger = LoggerDebug()
+
+    elif level == 'error':
+        logger = LoggerError()
+
+    logger.logger_output(message)
 

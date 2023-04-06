@@ -1,7 +1,6 @@
 from fastapi.testclient import TestClient
-from linebot import LineBotApi
-from linebot.models import TextMessage, MessageEvent, TextSendMessage
-from main import app, handle_message
+from linebot.models import TextMessage, MessageEvent, TextSendMessage, ImageSendMessage
+from main import app, handle_message_text
 from dotenv import load_dotenv
 from pytest_mock import MockerFixture
 import json
@@ -10,12 +9,6 @@ load_dotenv('./.env')
 
 client = TestClient(app)
 
-
-def test_read_root():
-    response = client.get('/')
-    assert response.status_code == 200
-    assert response.json() == {"message": "hello"}
-    print(response.json())
 
 def test_callback(mocker: MockerFixture):
     client = TestClient(app)
@@ -27,19 +20,42 @@ def test_callback(mocker: MockerFixture):
     assert response.json()['content'] == json.dumps(data)
 
 
-def test_callback_handler(mocker: MockerFixture):
+def test_callback_reply_text(mocker: MockerFixture):
     event = MessageEvent(
         reply_token='dummy_token',
         message=TextMessage(text='sample_text'),
     )
-    mock_line_bot_api = mocker.Mock()
-    mocker.patch("linebot.LineBotApi.reply_message", mock_line_bot_api)
-    handle_message(event)
+    reply_mock = mocker.Mock()
+    mocker.patch("linebot.LineBotApi.reply_message",
+                 reply_mock)
+    handle_message_text(event)
 
-    mock_line_bot_api.assert_called()
-    mock_line_bot_api.assert_called_once()
-    mock_line_bot_api.assert_called_with(event.reply_token, messages=TextSendMessage(text=event.message.text))
+    reply_mock.assert_called()
+    reply_mock.assert_called_once()
+    reply_mock.assert_called_with(
+        reply_token=event.reply_token, messages=TextSendMessage(text=event.message.text))
 
+
+def test_callback_reply_image(mocker: MockerFixture):
+    # 以下検証済み
+
+    event = MessageEvent(
+        reply_token='dummy_token',
+        message=TextMessage(text='猫の画像'),
+    )
+    reply_mock = mocker.Mock()
+    mocker.patch("linebot.LineBotApi.reply_message", reply_mock)
+    handle_message_text(event, req_test=True)
+
+    reply_mock.assert_called()
+    reply_mock.assert_called_once()
+    reply_mock.assert_called_once_with(
+        reply_token=event.reply_token,
+        messages=ImageSendMessage(
+            original_content_url='dummy_original_content_url',
+            preview_image_url='dummy_preview_image_url'
+        )
+    )
 
 
 

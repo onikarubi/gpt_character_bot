@@ -23,20 +23,17 @@ class ImageSize:
 
     @property
     def size(self):
-        if not self.image_size in self.image_size_list:
-            return
+        if not self._size in self.image_size_list:
+            raise ValueError('特定のサイズが含まれていない')
 
-        if (self.x == self.y) and (self.image_size in self.image_size_list):
-            return
-
-        return self.image_size
+        return self._size
 
 
 class ImageModel:
     DEFAULT_OUTPUT = 'output/output.png'
 
     def __init__(self, image_size: ImageSize, output_image: str = DEFAULT_OUTPUT, input_image: str = None) -> None:
-        self._image_size = image_size.image_size
+        self._image_size = image_size.size
 
         if not output_image.split('.')[-1] == "png":
             raise ValueError

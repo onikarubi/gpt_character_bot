@@ -80,11 +80,13 @@ class GmailSender:
     def send_gmail(self, message: str, subject: str = '', to_email: str = None):
 
         try:
-            if not to_email:
-                to_email = self.root_email
+            if to_email:
+                self.multipart['To'] = to_email
+
+            else:
+                self.multipart['To'] = self.root_email
 
             self.multipart['From'] = self.email
-            self.multipart['To'] = to_email
             self.multipart['Subject'] = subject
             message = MIMEText(message, "plain", "utf-8")
             self.multipart.attach(message)

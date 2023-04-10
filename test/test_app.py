@@ -45,7 +45,7 @@ def test_callback_reply_image(mocker: MockerFixture):
     )
     reply_mock = mocker.Mock()
     mocker.patch("linebot.LineBotApi.reply_message", reply_mock)
-    handle_message_text(event, req_test=True)
+    handle_message_text(event, test_mode=True)
 
     reply_mock.assert_called()
     reply_mock.assert_called_once()

@@ -9,7 +9,6 @@ load_dotenv('./.env')
 
 client = TestClient(app)
 
-
 def test_callback(mocker: MockerFixture):
     client = TestClient(app)
     mocker.patch("linebot.SignatureValidator.validate", return_value=True)
@@ -37,8 +36,6 @@ def test_callback_reply_text(mocker: MockerFixture):
 
 
 def test_callback_reply_image(mocker: MockerFixture):
-    # 以下検証済み
-
     event = MessageEvent(
         reply_token='dummy_token',
         message=TextMessage(text='猫の画像'),
@@ -56,6 +53,7 @@ def test_callback_reply_image(mocker: MockerFixture):
             preview_image_url='dummy_preview_image_url'
         )
     )
+
 
 
 

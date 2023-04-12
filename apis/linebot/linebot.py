@@ -1,7 +1,7 @@
 from linebot import LineBotApi, WebhookHandler
 from linebot.models import MessageEvent, ImageSendMessage, TextSendMessage
 from linebot.exceptions import LineBotApiError
-from apis.dall_e.image_model import ImageGenerator, ImageSize
+from apis.openai.dall_e.image_model import ImageGenerator, ImageSize
 
 
 class LineBotHandler:

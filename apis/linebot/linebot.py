@@ -74,7 +74,7 @@ class LineBotReplyImage(LineBotHandler):
 
         image = ImageGenerator(
             image_size=ImageSize(self.image_size, self.image_size),
-            prompt=event.message.text
+            prompt="a close up, studio photographic portrait of a white siamese cat that looks curious, backlit ears"
         )
 
         content_url = image.create_image()

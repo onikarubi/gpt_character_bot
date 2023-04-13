@@ -33,15 +33,22 @@ class GPT3Chat:
                     {"role": "user", "content": self.prompt}
                 ]
             )
-            return completion
+            response_msg = self._create_question_with_response_content(completion)
+            success_msg = f"""
+            メッセージの生成が完了しました。
+            内容:
+
+            {response_msg}
+            """
+            log.logger_output(level='info', message=success_msg)
+            return response_msg
 
         except Exception:
             log.logger_output(level='error', message=f'chatgpt apiの処理中に問題が発生しました')
             raise
 
-    def create_question_with_response_content(self) -> str:
-        completion = self.create_question()
-        return completion.choices[0].message.content.replace('\n', '')
+    def _create_question_with_response_content(self, msg_content: str) -> str:
+        return msg_content.choices[0].message.content.replace('\n', '')
 
 
 class GPT3ChatFactory:
@@ -53,7 +60,7 @@ class GPT3ChatFactory:
             prompt=input_prompt,
             max_tokens=20
         )
-        return completion.create_question_with_response_content()
+        return completion.create_question()
 
     def _factory_init() -> None:
         load_dotenv()

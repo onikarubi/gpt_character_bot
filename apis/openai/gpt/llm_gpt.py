@@ -1,66 +1,60 @@
 from dotenv import load_dotenv
-from langchain.llms import OpenAI
-from langchain.prompts import PromptTemplate
 import openai
 import os
 
-load_dotenv()
-
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-openai.api_key = OPENAI_API_KEY
-
-ex_template = """
-これは素晴らしい! // ポジティブ
-この番組は普通だった。// ニュートラル
-これは酷い! // ネガティブ
-あの映画は最高だった! // ポジティブ
-休暇はまずまずでした。 // ニュートラル
-{sentence} //
-"""
-
-
-class GPT3Models:
+class GPT3Model:
     def __init__(self, model) -> None:
-        self._model = model
+        self.use_model = model
+        self._model_list = ["gpt-3.5-turbo-0301", "gpt-3.5-turbo"]
 
-    @property
-    def model(self):
-        return self._model
+        if not self.use_model in self._model_list:
+            raise ValueError('GPT3に対応しているモデルがありません')
 
 
-class GPT3Completion(GPT3Models):
-    def __init__(self, model, prompt, max_tokens=9, temperature=0) -> None:
-        super().__init__(model)
+class GPT3Chat:
+    def __init__(self, model: str = '', prompt: str = '', max_tokens=9, temperature=0) -> None:
+        self.model = GPT3Model(model=model)
         self.prompt = prompt
         self.max_tokens = max_tokens
         self.temperature = temperature
 
-    def create_completion(self):
-        completion = openai.Completion.create(
-            model=self.model,
-            prompt=self.prompt,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature
+    def create_question(self):
+        content = """
+            魔理沙:やや強気で物知りな女性。文法上違和感のない限りかならず「だぜ」を語尾につけてしゃべる。小学校2年生でも理解できるように説明してくれる。
+            """
+
+        completion = openai.ChatCompletion.create(
+            model=self.model.use_model,
+            messages=[
+                {"role": "system", "content": f"あなたは次のような人物になりきって回答をしてください\n\n{content}"},
+                {"role": "user", "content": "ねぇ魔理沙、最近よくChatGPTって聞くけど、何だろう？"},
+                {"role": "assistant", "content": "あぁ、ChatGPTか。それはAI（人工知能）の一種で、すごく賢いコンピューターだぜ。"},
+                {"role": "user", "content": self.prompt}
+            ]
         )
 
         return completion
 
-    def create_completion_with_response_text(self) -> str:
-        completion = self.create_completion()
-        return completion.choices[0].text.replace('\n', '')
+    def create_question_with_response_content(self) -> str:
+        completion = self.create_question()
+        return completion.choices[0].message.content.replace('\n', '')
 
+
+class GPT3ChatFactory:
     @classmethod
-    def input_prompt_factory(cls):
-        input_prompt = cls.input_prompt()
+    def input_prompt_factory(cls, modelname: str = "gpt-3.5-turbo"):
+        cls._factory_init()
+        input_prompt = cls._input_prompt()
 
-        completion = GPT3Completion(
-            model="text-davinci-003",
+        completion = GPT3Chat(
+            model=modelname,
             prompt=input_prompt,
             max_tokens=20
         )
-        completion.create_completion_with_response_text()
+        result = completion.create_question_with_response_content()
+        print(result)
 
-    def input_prompt() -> str:
+    def _input_prompt() -> str:
         output = ""
 
         while True:
@@ -73,26 +67,10 @@ class GPT3Completion(GPT3Models):
 
         return output
 
+    def _factory_init():
+        load_dotenv()
+        OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+        openai.api_key = OPENAI_API_KEY
 
-class BaseLLMModel:
-    def __init__(self, model, temperature=None) -> None:
-        self.model = model
-        self.temperature = temperature
-        if not temperature:
-            self.temperature = 0
-
-        self.llm = OpenAI(model_name=model, temperature=temperature)
-
-
-prompt_temp = PromptTemplate(
-    input_variables=["sentence"], template=ex_template)
-
-ex_prompt = GPT3Completion.input_prompt()
-
-completion = GPT3Completion(
-    model="text-davinci-003",
-    prompt=prompt_temp.format(sentence=ex_prompt),
-    max_tokens=8
-)
-res_text = completion.create_completion_with_response_text()
-print(res_text)
+if __name__ == "__main__":
+    GPT3ChatFactory.input_prompt_factory()

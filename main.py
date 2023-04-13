@@ -1,10 +1,10 @@
 from fastapi import FastAPI, Request, Response, status
 from linebot import LineBotApi, WebhookHandler
-from linebot.exceptions import InvalidSignatureError
-from linebot.exceptions import LineBotApiError
+from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import TextMessage, MessageEvent, ImageSendMessage, TextSendMessage
 from apis.linebot.linebot import LineBotReplyText, LineBotReplyImage, LineBotHandler
-from logs.line_api_access import line_logger_output
+from apis.openai.gpt.llm_gpt import GPT3ChatFactory
+import logs.request_logger
 import os
 
 LINE_BOT_API_TOKEN = os.getenv('LINE_BOT_API_TOKEN')
@@ -25,14 +25,15 @@ async def callback(request: Request):
 
     try:
         line_bot_handler.webhook_handler.handle(body.decode(encoding='utf-8'), signature)
-        line_logger_output(level='info', message='署名に成功しました')
+        logs.request_logger.logger_output(level='info', message='署名が完了しました')
 
     except InvalidSignatureError:
-        line_logger_output(level='error', message='署名に失敗しました')
+        logs.request_logger.logger_output(level='error', message=f'署名に失敗しました: {callback}')
         raise
 
     except AttributeError:
-        line_logger_output(level='error', message='署名に失敗しました。署名の設定を見直して下さい')
+        logs.request_logger.logger_output(
+            level='error', message=f'署名に失敗しました: {callback}\n署名の設定を見直して下さい')
         raise
 
     return {"status_code": Response(status_code=status.HTTP_200_OK), "content": body}
@@ -49,9 +50,11 @@ def reply_message_image(event: MessageEvent, test_mode=False):
 
 
 def reply_message_text(event: MessageEvent):
+    content = GPT3ChatFactory.output_prompt(input_prompt=event.message.text)
     reply_message = LineBotReplyText(
         api_token=LINE_BOT_API_TOKEN,
-        api_secret=LINE_BOT_API_SECRET
+        api_secret=LINE_BOT_API_SECRET,
+        text_content=content
     )
 
     reply_message.reply_message(event)

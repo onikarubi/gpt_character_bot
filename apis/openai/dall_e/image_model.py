@@ -1,7 +1,4 @@
 from openai import Image
-from .initialize import open_ai_init
-
-open_ai_init()
 
 class ImageUrlNotFoundException(Exception):
     pass

@@ -11,7 +11,6 @@ class LineBotHandler:
         self._line_bot_api = LineBotApi(self._api_token)
         self._webhook_handler = WebhookHandler(self._api_secret)
 
-
     @property
     def line_bot_api(self):
         if not self._api_token:
@@ -24,7 +23,6 @@ class LineBotHandler:
             raise ValueError('api secretが指定されていません')
         return self._webhook_handler
 
-    def reply_message(self, message_event: MessageEvent): pass
 
 
 class LineBotReplyText(LineBotHandler):
@@ -33,7 +31,6 @@ class LineBotReplyText(LineBotHandler):
         self.text_content = text_content
 
     def reply_message(self, message_event: MessageEvent):
-
         send_text = self._send_text_message(message_event)
 
         self.line_bot_api.reply_message(
@@ -65,7 +62,7 @@ class LineBotReplyImage(LineBotHandler):
         )
 
 
-    def _create_image(self, event: MessageEvent) -> ImageSendMessage:
+    def _create_image(self) -> ImageSendMessage:
         if self.test_mode:
             return ImageSendMessage(
                 original_content_url='dummy_original_content_url',

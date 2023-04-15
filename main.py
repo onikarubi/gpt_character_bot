@@ -3,7 +3,7 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import TextMessage, MessageEvent, ImageSendMessage, TextSendMessage
 from apis.linebot.linebot import LineBotReplyText, LineBotReplyImage, LineBotHandler
-from apis.openai.gpt.llm_gpt import GPT3ChatFactory
+from apis.openai.gpt.character_bot import CharacterBot
 import logs.request_logger
 import os
 
@@ -25,10 +25,10 @@ async def callback(request: Request):
 
     try:
         line_bot_handler.webhook_handler.handle(body.decode(encoding='utf-8'), signature)
-        logs.request_logger.logger_output(level='info', message='署名が完了しました')
+        logs.request_logger.logger_output(level='info', message='署名が完了しました', output_filename='line_api_access')
 
     except InvalidSignatureError:
-        logs.request_logger.logger_output(level='error', message=f'署名に失敗しました: {callback}')
+        logs.request_logger.logger_output(level='error', message=f'署名に失敗しました: {callback}', file_output='line_api_access')
         raise
 
     except AttributeError:
@@ -50,11 +50,12 @@ def reply_message_image(event: MessageEvent, test_mode=False):
 
 
 def reply_message_text(event: MessageEvent):
-    content = GPT3ChatFactory.output_prompt(input_prompt=event.message.text)
+    character_bot = CharacterBot()
+    reply_content = character_bot.reply_character_bot_completion(input_prompt=event.message.text)
     reply_message = LineBotReplyText(
         api_token=LINE_BOT_API_TOKEN,
         api_secret=LINE_BOT_API_SECRET,
-        text_content=content
+        text_content=reply_content
     )
 
     reply_message.reply_message(event)
@@ -72,3 +73,4 @@ def handle_message_text(event: MessageEvent, test_mode = False):
     except:
         error_msg = 'Line bot上で問題が発生しました。'
         raise LineBotApiError(error_msg)
+

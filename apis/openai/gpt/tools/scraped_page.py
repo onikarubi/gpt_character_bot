@@ -1,6 +1,6 @@
 
 from bs4 import BeautifulSoup, Tag, NavigableString
-import requests
+import request_test
 import os
 
 TARGET_SCRAPED_URL = os.getenv('TARGET_SCRAPED_URL')
@@ -9,7 +9,7 @@ def is_string(tag_str: str) -> bool:
     return isinstance(tag_str, NavigableString)
 
 def get_elements_by_tag_name(url, tag: str, attrs: dict[str, str]) -> list[Tag]:
-    response = requests.get(url)
+    response = request_test.get(url)
     bs = BeautifulSoup(response.content, 'html.parser')
     elements = bs.find_all(tag, attrs=attrs)
     return elements

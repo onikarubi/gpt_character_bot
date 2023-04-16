@@ -1,4 +1,4 @@
-import requests
+import request_test
 import pytest
 
 class TestLineMessagingApi:

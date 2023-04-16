@@ -5,3 +5,5 @@ __pycache__
 **/Spacefile
 **.log
 **.txt
+**.csv
+**.jsonl

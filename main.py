@@ -3,6 +3,7 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import TextMessage, MessageEvent, ImageSendMessage, TextSendMessage
 from apis.linebot.linebot import LineBotReplyText, LineBotReplyImage, LineBotHandler
+from apis.openai.gpt.llm_gpt import GPT3ChatCompletion
 from apis.openai.gpt.character_bot import CharacterBot
 import logs.request_logger
 import os
@@ -50,8 +51,11 @@ def reply_message_image(event: MessageEvent, test_mode=False):
 
 
 def reply_message_text(event: MessageEvent):
-    character_bot = CharacterBot()
-    reply_content = character_bot.reply_character_bot_completion(input_prompt=event.message.text)
+    completion = GPT3ChatCompletion(
+        model="gpt-3.5-turbo",
+        temperature=.5
+    )
+    reply_content = completion.create_completion(event.message.text)
     reply_message = LineBotReplyText(
         api_token=LINE_BOT_API_TOKEN,
         api_secret=LINE_BOT_API_SECRET,

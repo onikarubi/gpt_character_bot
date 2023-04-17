@@ -1,6 +1,6 @@
 
 from bs4 import BeautifulSoup, Tag, NavigableString
-import request_test
+import requests
 import os
 
 TARGET_SCRAPED_URL = os.getenv('TARGET_SCRAPED_URL')
@@ -9,7 +9,7 @@ def is_string(tag_str: str) -> bool:
     return isinstance(tag_str, NavigableString)
 
 def get_elements_by_tag_name(url, tag: str, attrs: dict[str, str]) -> list[Tag]:
-    response = request_test.get(url)
+    response = requests.get(url)
     bs = BeautifulSoup(response.content, 'html.parser')
     elements = bs.find_all(tag, attrs=attrs)
     return elements
@@ -58,11 +58,6 @@ def get_edit_contents():
             continue
 
         yield content
-
-def write_to_output() -> None:
-    with open('apis/openai/gpt/tools/output.csv', 'w') as f:
-        for content in get_edit_contents():
-            f.write(content)
 
 if __name__ == "__main__":
     write_to_output()

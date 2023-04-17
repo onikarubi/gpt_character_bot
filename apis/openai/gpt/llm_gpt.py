@@ -84,6 +84,7 @@ class GPT3ChatCompletion(GPT3Model):
     def create_completion(self, prompt: Union[str, dict[str, any]]) -> str:
         try:
             self.templates.append({"role": "user", "content": prompt})
+
             completion = openai.ChatCompletion.create(
                 model=self.use_model,
                 messages=self.templates,

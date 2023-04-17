@@ -53,7 +53,8 @@ def reply_message_image(event: MessageEvent, test_mode=False):
 def reply_message_text(event: MessageEvent):
     completion = GPT3ChatCompletion(
         model="gpt-3.5-turbo",
-        temperature=.5
+        temperature=.3,
+        max_tokens=200
     )
     reply_content = completion.create_completion(event.message.text)
     reply_message = LineBotReplyText(

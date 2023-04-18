@@ -1,10 +1,8 @@
 from fastapi import FastAPI, Request, Response, status
-from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
-from linebot.models import TextMessage, MessageEvent, ImageSendMessage, TextSendMessage
+from linebot.models import TextMessage, MessageEvent
 from apis.linebot.linebot import LineBotReplyText, LineBotReplyImage, LineBotHandler
 from apis.openai.gpt.llm_gpt import GPT3ChatCompletion
-from apis.openai.gpt.character_bot import CharacterBot
 import logs.request_logger
 import os
 

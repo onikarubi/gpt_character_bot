@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 from dotenv import load_dotenv
 from typing import Union
 from logs.request_logger import logger_output
+from openai.error import OpenAIError
 import csv
 import openai
 import os
@@ -98,7 +99,8 @@ class GPT3ChatCompletion(GPT3Model):
             return response_content
 
         except:
-            raise
+            logger_output(level='error', message='openAI API側の処理中に例外が発生しました。', output_filename='openai_access')
+            raise OpenAIError('openAI API側の処理中に例外が発生しました。')
 
     def get_templates(self) -> list[dict[str, str]]:
         with open('apis/openai/gpt/templates/chat_template.csv') as csv_file:

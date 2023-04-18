@@ -11,7 +11,7 @@ class ApiAccessLogger:
     APPLICATION_BOT_PASSWORD = os.getenv('APPLICATION_BOT_PASSWORD')
     APPLICATION_ROOT_EMAIL = os.getenv('APPLICATION_ROOT_EMAIL')
 
-    def __init__(self, output_filename: str, level: int, file_output: bool = True, console: bool = True, send_email: bool = False) -> None:
+    def __init__(self, output_filename: str, level: int, file_output: bool = True, console: bool = True, send_email: bool = False, formatter: logging.Formatter = None) -> None:
         self.output_filename = output_filename
         self.level = level
         self.file_output = file_output
@@ -20,9 +20,11 @@ class ApiAccessLogger:
         self.log_file = os.path.join('logs', f"{output_filename}.log")
         self.file_handler = logging.FileHandler(self.log_file)
         self.stream_handler = logging.StreamHandler()
-        self.format = logging.Formatter('%(levelname)s: %(message)s')
-        self.file_handler.setFormatter(self.format)
-        self.stream_handler.setFormatter(self.format)
+        self.formatter = formatter
+        if not self.formatter:
+            self.formatter = logging.Formatter('%(levelname)s: %(message)s')
+        self.file_handler.setFormatter(self.formatter)
+        self.stream_handler.setFormatter(self.formatter)
         self.logger = logging.getLogger(__name__)
         self._logger_init()
 
@@ -65,8 +67,9 @@ class ApiAccessLogger:
 
 
 class LoggerInfo(ApiAccessLogger):
-    def __init__(self, output_filename: str, level: int = logging.INFO, file_output: bool = True, console: bool = True, send_email: bool = False) -> None:
-        super().__init__(output_filename, level, file_output, console, send_email)
+    def __init__(self, output_filename: str, level: int = logging.INFO, file_output: bool = True, console: bool = True, send_email: bool = False, formatter: logging.Formatter = None) -> None:
+        super().__init__(output_filename, level, file_output, console, send_email, formatter)
+        self.formatter = logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
         self.level = level
         self.console = True
         self.file_output = True
@@ -74,8 +77,8 @@ class LoggerInfo(ApiAccessLogger):
 
 
 class LoggerDebug(ApiAccessLogger):
-    def __init__(self, output_filename: str, level: int = logging.DEBUG, file_output: bool = True, console: bool = True, send_email: bool = False) -> None:
-        super().__init__(output_filename, level, file_output, console, send_email)
+    def __init__(self, output_filename: str, level: int = logging.DEBUG, file_output: bool = True, console: bool = True, send_email: bool = False, formatter: logging.Formatter = None) -> None:
+        super().__init__(output_filename, level, file_output, console, send_email, formatter)
         self.level = level
         self.console = True
         self.file_output = False
@@ -83,12 +86,14 @@ class LoggerDebug(ApiAccessLogger):
 
 
 class LoggerError(ApiAccessLogger):
-    def __init__(self, output_filename: str, level: int = logging.ERROR, file_output: bool = True, console: bool = True, send_email: bool = False) -> None:
-        super().__init__(output_filename, level, file_output, console, send_email)
+    def __init__(self, output_filename: str, level: int = logging.ERROR, file_output: bool = True, console: bool = True, send_email: bool = False, formatter: logging.Formatter=None) -> None:
+        super().__init__(output_filename, level, file_output, console, send_email, formatter)
         self.level = level
         self.file_output = True
         self.console = True
         self.send_email = True
+        self.formatter = logging.Formatter(
+            "%(levelname)s %(message)s: %(filename)s %(funcName)s")
 
 
 def logger_output(level: str = '', message: str = '', output_filename: str = ''):

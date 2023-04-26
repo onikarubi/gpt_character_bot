@@ -34,7 +34,9 @@ class GPT3Model(metaclass=ABCMeta):
         return self._use_model
 
     @abstractmethod
-    def create_completion(self, prompt: Union[str, dict[str, any]]) -> str: pass
+    def create_completion(self, prompt: Union[str, dict[str, any]]) -> str:
+        """Generate a completion for the given prompt."""
+        pass
 
 
 class GPT3Completion(GPT3Model):

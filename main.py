@@ -1,5 +1,4 @@
 from fastapi import FastAPI, Request, Response, status
-from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import TextMessage, MessageEvent, ImageSendMessage, TextSendMessage
 from apis.linebot.linebot import LineBotReplyText, LineBotReplyImage, LineBotHandler
@@ -10,7 +9,6 @@ import os
 
 LINE_BOT_API_TOKEN = os.getenv('LINE_BOT_API_TOKEN')
 LINE_BOT_API_SECRET = os.getenv('LINE_BOT_API_SECRET')
-
 
 app = FastAPI()
 

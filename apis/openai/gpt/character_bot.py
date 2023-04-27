@@ -1,26 +1,37 @@
-from .llm_gpt import GPT3Completion
-import os
+from .llm_gpt import GPT3ChatCompletion
+import csv
 
-FINE_TUNED_MODEL_BABBAGE = os.getenv("FINE_TUNED_MODEL_BABBAGE")
+class ConversionCharacterChatGPT:
+    DEFAULT_USE_MODEL = 'gpt-3.5-turbo'
+    DEFAULT_MAX_TOKEN = 200
+    DEFAULT_TEMPERATURE = .2
+    DEFAULT_TOP_P = 0
 
-def read_prompt_template() -> str:
-    with open('apis/openai/gpt/character_config_prompt.txt', "r") as f:
-        r = f.read()
+    def __init__(self) -> None:
+        self.use_model = self.DEFAULT_USE_MODEL
+        self.max_token = self.DEFAULT_MAX_TOKEN
+        self.temperature = self.DEFAULT_TEMPERATURE
+        self.top_p = self.DEFAULT_TOP_P
+        self.template_csv = 'apis/openai/gpt/templates/chat_template.csv'
+        self.templates = self._get_templates()
 
-    return r
-
-
-class CharacterBot:
-    @classmethod
-    def reply_character_bot_completion(cls, input_prompt: str = ''):
-        prompt = read_prompt_template() + input_prompt
-
-        gpt3_completion = GPT3Completion(
-            model=FINE_TUNED_MODEL_BABBAGE,
-            max_tokens=50,
-            temperature=0,
-            top_p=0
+    def __call__(self, prompt) -> str:
+        chat_completion = GPT3ChatCompletion(
+            model=self.use_model,
+            max_tokens=self.max_token,
+            temperature=self.temperature,
+            top_p=self.top_p
         )
 
-        response = gpt3_completion.create_completion(messages=prompt)
-        return response
+        print(chat_completion.max_tokens)
+
+        self.templates.append({"role": "user", "content": prompt})
+        return chat_completion.create_completion(messages=self.templates)
+
+    def _get_templates(self) -> list[dict[str, str]]:
+        with open(self.template_csv) as csv_file:
+            templates = csv.DictReader(csv_file)
+
+            return [template for template in templates]
+
+

@@ -1,7 +1,7 @@
 from .llm_gpt import GPT3ChatCompletion
 import csv
 
-class ConversionCharacterChatGPT:
+class ConversionBot:
     DEFAULT_USE_MODEL = 'gpt-3.5-turbo'
     DEFAULT_MAX_TOKEN = 200
     DEFAULT_TEMPERATURE = .2
@@ -22,8 +22,6 @@ class ConversionCharacterChatGPT:
             temperature=self.temperature,
             top_p=self.top_p
         )
-
-        print(chat_completion.max_tokens)
 
         self.templates.append({"role": "user", "content": prompt})
         return chat_completion.create_completion(messages=self.templates)

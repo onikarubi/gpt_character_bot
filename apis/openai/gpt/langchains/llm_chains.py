@@ -10,7 +10,7 @@ class SearchQuestionAndAnswer:
     質問に対する回答を検索し、指定された言語に翻訳するクラス。
     """
 
-    def __init__(self, question: str, output_language: str, is_verbose: bool = False) -> None:
+    def __init__(self, question: str, output_language: str, is_verbose: bool = False, max_token: int = 200) -> None:
         """
         コンストラクタ。
 
@@ -18,7 +18,7 @@ class SearchQuestionAndAnswer:
         :param output_language: 出力結果の言語。
         :param is_verbose: デバッグ情報を出力するかどうか。
         """
-        self.llm = OpenAI(temperature=0)
+        self.llm = OpenAI(temperature=0, max_tokens=max_token)
         self.question = question
         self.output_language = output_language
         self.search_result_template = self._create_search_result_template()
@@ -70,8 +70,7 @@ class SearchQuestionAndAnswer:
 
         :return: 取得した回答の文字列。
         """
-        response = self.overall_chain.run(self.question)
-        await asyncio.sleep(3)
+        response = await self.overall_chain.arun(self.question)
         return response
 
     def _create_search_result_template(self) -> PromptTemplate:

@@ -2,7 +2,8 @@ from langchain.agents import AgentType, initialize_agent, load_tools, AgentExecu
 from langchain import OpenAI
 from langchain.chains import LLMChain, SimpleSequentialChain
 from langchain.prompts import PromptTemplate
-import time
+import asyncio
+import datetime
 
 class SearchQuestionAndAnswer:
     """
@@ -28,24 +29,50 @@ class SearchQuestionAndAnswer:
             agent_name=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION)
         self.overall_chain = self._create_overall_chain(verbose=is_verbose)
 
+
     def run(self):
         """
-        質問に対する回答を検索し、指定された言語に翻訳します。
+        質問に対する回答を検索し、指定された言語に翻訳された言語を出力します。
         """
         try:
-            current_sec = int(time.time() % 60)
-            if current_sec % 2 == 0:
-                print('\rIn the middle of thinking', '/', end='', flush=True)
-
-            else:
-                print('\rIn the middle of thinking', '\\', end='', flush=True)
-
-            response = self.overall_chain.run(self.question)
-            print(response)
+            response = asyncio.run(self._thinking_task())
 
         except:
             print('処理を中断')
             raise
+
+        print(response)
+
+    async def _thinking_task(self) -> str:
+        """
+        質問に対する回答を非同期に取得するタスクを実行します。
+
+        :return: 取得した回答の文字列。
+        """
+        task = asyncio.create_task(self._thinking())
+
+        while not task.done():
+            now = datetime.datetime.now()
+
+            if now.second % 2 == 0:
+                print('\rwaiting... /', end='', flush=True)
+            else:
+                print('\rwaiting... \\', end='', flush=True)
+
+            await asyncio.sleep(1)
+
+        print()
+        return task.result()
+
+    async def _thinking(self):
+        """
+        質問に対する回答を取得します。
+
+        :return: 取得した回答の文字列。
+        """
+        response = self.overall_chain.run(self.question)
+        await asyncio.sleep(3)
+        return response
 
     def _create_search_result_template(self) -> PromptTemplate:
         """
@@ -73,7 +100,7 @@ class SearchQuestionAndAnswer:
 
     def _create_overall_chain(self, verbose: bool) -> SimpleSequentialChain:
         """
-        エージェントチェーンと検索結果チェーンを組み合わせたチェーンを生成します。
+        エージェントチェーンと検索結果を翻訳したチェーンを組み合わせたチェーンを生成します。
 
         :param verbose: デバッグ情報を出力するかどうか。
         :return: 生成された SimpleSequentialChain オブジェクト。

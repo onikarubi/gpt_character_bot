@@ -2,6 +2,7 @@ from langchain.agents import AgentType, initialize_agent, load_tools, AgentExecu
 from langchain import OpenAI
 from langchain.chains import LLMChain, SimpleSequentialChain
 from langchain.prompts import PromptTemplate
+from asyncio import Task
 import asyncio
 import datetime
 
@@ -18,6 +19,9 @@ class SearchQuestionAndAnswer:
         :param output_language: 出力結果の言語。
         :param is_verbose: デバッグ情報を出力するかどうか。
         """
+        if max_token > 0:
+            raise ValueError('トークン数を0 < n <= 500の範囲内で指定してください')
+
         self.llm = OpenAI(temperature=0, max_tokens=max_token)
         self.question = question
         self.output_language = output_language
@@ -50,7 +54,16 @@ class SearchQuestionAndAnswer:
         :return: 取得した回答の文字列。
         """
         task = asyncio.create_task(self._thinking())
+        await self.task_waiting(task)
 
+        print()
+        return task.result()
+
+    async def task_waiting(self, task: Task):
+        """ 概要：
+        タスクの完了を待つために、1秒ごとにwaiting... /またはwaiting... \を表示する。
+        引数： task (Task): 完了を待つタスク。
+        """
         while not task.done():
             now = datetime.datetime.now()
 
@@ -60,9 +73,6 @@ class SearchQuestionAndAnswer:
                 print('\rwaiting... \\', end='', flush=True)
 
             await asyncio.sleep(1)
-
-        print()
-        return task.result()
 
     async def _thinking(self):
         """

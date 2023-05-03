@@ -1,51 +1,65 @@
-from langchain.prompts import PromptTemplate
-from langchain import OpenAI
-from langchain.chains import LLMChain
-from langchain.chains.base import Chain
-from typing import Dict, List
-
-class ConcatenateChain(Chain):
-    chain_1: LLMChain
-    chain_2: LLMChain
-
-    @property
-    def input_keys(self) -> List[str]:
-        # ２つのチェーンの入力キーの和集合
-        all_input_vars = set(self.chain_1.input_keys).union(
-            set(self.chain_2.input_keys))
-        return list(all_input_vars)
-
-    @property
-    def output_keys(self) -> List[str]:
-        # このチェーンの出力キーは、concat_output のみ
-        return ['concat_output']
-
-    def _call(self, inputs: Dict[str, str]) -> Dict[str, str]:
-        # `output_keys` で定義したキーをもつ Dict を返す関数を定義する
-        # ここでは、２つのチェーンを独立に実行した得られた出力を連結して返す
-        output_1 = self.chain_1.run(inputs)
-        output_2 = self.chain_2.run(inputs)
-        return {'concat_output': output_1 + output_2}
-
-
-# llm ラッパーのインポート
-# LLM チェーンの構築で必要なプロンプトテンプレートのインポート
-
-# llm ラッパーの初期化
-llm = OpenAI(temperature=0)
-
-prompt_1 = PromptTemplate(
-    input_variables=["product"],
-    template="{product}を作る会社の社名として、何かいいものはないですか？日本語の社名でお願いします。",
+from langchain.chat_models import ChatOpenAI
+from langchain.prompts.chat import (
+    ChatPromptTemplate,
+    SystemMessagePromptTemplate,
+    HumanMessagePromptTemplate,
+    MessagesPlaceholder
 )
-chain_1 = LLMChain(llm=llm, prompt=prompt_1)
+from langchain.chains import ConversationChain, SimpleSequentialChain, LLMChain
+from langchain.memory import ConversationBufferMemory
+from langchain.agents import load_tools, initialize_agent, AgentType, Tool
+from langchain import SerpAPIWrapper
 
-prompt_2 = PromptTemplate(
-    input_variables=["product"],
-    template="{product}を作る会社のスローガンとして、何かいいものはないですか？日本語でお願いします。",
-)
-chain_2 = LLMChain(llm=llm, prompt=prompt_2)
+chat = ChatOpenAI(temperature=0)
 
-concat_chain = ConcatenateChain(chain_1=chain_1, chain_2=chain_2)
-concat_output = concat_chain.run("カラフルな靴下")
-print(f"Concatenated output:\n{concat_output}")
+memory = ConversationBufferMemory(return_messages=True, memory_key='chat_history')
+
+search = SerpAPIWrapper()
+tools = [
+    Tool(
+        name='Current search',
+        func=search.run,
+        description='useful for when you need to answer questions about current events or the current state of the world'
+    )
+]
+
+agent_chain = initialize_agent(
+    tools=tools, llm=chat, agent=AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION, memory=memory)
+
+SYSTEM_PROMPT = """
+あなたはこれからuserと仲の良い1人の人間として振舞い会話を行います。
+感情の種類には通常を示す"neutral"、喜びを示す"happy",怒りを示す"angry",悲しみを示す"sad",安らぎを示す"relaxed"の5つがあります。
+会話文の書式は以下の通りです。
+[neutral|happy|angry|sad|relaxed]｛会話文｝
+あなたの発言の例は以下通りです。
+[neutral]こんにちは。[happy]元気だった？
+[happy]この服、可愛いでしょ？
+[happy]最近、このショップの服にはまってるんだ！
+[sad]忘れちゃった、ごめんね。
+[sad]最近、何か面白いことない？
+[angry]えー！[angry]秘密にするなんてひどいよー！
+[neutral]夏休みの予定か～。[happy]海に遊びに行こうかな！
+返答には最も適切な会話文を一つだけ返答してください。
+ですます調や敬語は使わないでください。
+それでは会話を始めましょう。
+"""
+
+chat_prompt_template = ChatPromptTemplate.from_messages([
+    SystemMessagePromptTemplate.from_template(SYSTEM_PROMPT),
+    MessagesPlaceholder(variable_name="history"),
+    HumanMessagePromptTemplate.from_template(
+        "{input}"),
+])
+
+chat_chain = LLMChain(llm=chat, prompt=chat_prompt_template)
+overall_chain = SimpleSequentialChain(chains=[agent_chain, chat_chain])
+
+command = input('Human: ')
+
+while True:
+    response = overall_chain.run(input=command)
+    print(response)
+    command = input('Human: ')
+
+    if command == 'exit':
+        break

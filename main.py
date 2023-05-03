@@ -5,6 +5,7 @@ from apis.linebot.linebot import LineBotReplyText, LineBotHandler
 from apis.openai.gpt.conversion_bot import ConversionBot
 import logs.request_logger
 import os
+import uvicorn
 
 LINE_BOT_API_TOKEN = os.getenv('LINE_BOT_API_TOKEN')
 LINE_BOT_API_SECRET = os.getenv('LINE_BOT_API_SECRET')
@@ -57,3 +58,5 @@ def handle_message_text(event: MessageEvent):
         error_msg = 'Line bot上で問題が発生しました。'
         raise LineBotApiError(error_msg)
 
+if __name__ == '__main__':
+    uvicorn.run('main:app', host='0.0.0.0', port=8000, reload=True)

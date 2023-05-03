@@ -1,7 +1,6 @@
 from linebot import LineBotApi, WebhookHandler
 from linebot.models import MessageEvent, ImageSendMessage, TextSendMessage
 from linebot.exceptions import LineBotApiError
-from apis.openai.dall_e.image_model import ImageGenerator, ImageSize
 
 
 class LineBotHandler:
@@ -59,25 +58,6 @@ class LineBotReplyImage(LineBotHandler):
         self._line_bot_api.reply_message(
             reply_token=event.reply_token,
             messages=message_image
-        )
-
-
-    def _create_image(self) -> ImageSendMessage:
-        if self.test_mode:
-            return ImageSendMessage(
-                original_content_url='dummy_original_content_url',
-                preview_image_url='dummy_preview_image_url'
-            )
-
-        image = ImageGenerator(
-            image_size=ImageSize(self.image_size, self.image_size),
-            prompt="a close up, studio photographic portrait of a white siamese cat that looks curious, backlit ears"
-        )
-
-        content_url = image.create_image()
-        return ImageSendMessage(
-            original_content_url=content_url,
-            preview_image_url=content_url
         )
 
 

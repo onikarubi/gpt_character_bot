@@ -13,7 +13,7 @@ class SearchQuestionAndAnswer:
     質問に対する回答を検索し、指定された言語に翻訳するクラス。
     """
 
-    def __init__(self, question: str, output_language: str, is_verbose: bool = False, max_token: int = 200) -> None:
+    def __init__(self, question: str, output_language: str, is_verbose: bool = False, max_token: int = 200, is_waiting_display=False) -> None:
         """
         コンストラクタ。
 
@@ -27,6 +27,7 @@ class SearchQuestionAndAnswer:
         self.llm = OpenAI(temperature=0, max_tokens=max_token)
         self.question = question
         self.output_language = output_language
+        self.is_waiting_display = is_waiting_display
         self.search_result_template = self._create_search_result_template()
         self.search_result_chain = LLMChain(
             llm=self.llm, prompt=self.search_result_template)
@@ -40,7 +41,6 @@ class SearchQuestionAndAnswer:
         self.agent_chain = self._agent_init(
             agent_name=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION)
         self.overall_chain = self._create_overall_chain(verbose=is_verbose)
-
 
     def run(self):
         """

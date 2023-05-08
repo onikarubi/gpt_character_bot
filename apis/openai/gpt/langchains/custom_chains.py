@@ -1,51 +1,93 @@
+from langchain.chat_models import ChatOpenAI
 from langchain.prompts import PromptTemplate
-from langchain import OpenAI
-from langchain.chains import LLMChain
-from langchain.chains.base import Chain
-from typing import Dict, List
-
-class ConcatenateChain(Chain):
-    chain_1: LLMChain
-    chain_2: LLMChain
-
-    @property
-    def input_keys(self) -> List[str]:
-        # ２つのチェーンの入力キーの和集合
-        all_input_vars = set(self.chain_1.input_keys).union(
-            set(self.chain_2.input_keys))
-        return list(all_input_vars)
-
-    @property
-    def output_keys(self) -> List[str]:
-        # このチェーンの出力キーは、concat_output のみ
-        return ['concat_output']
-
-    def _call(self, inputs: Dict[str, str]) -> Dict[str, str]:
-        # `output_keys` で定義したキーをもつ Dict を返す関数を定義する
-        # ここでは、２つのチェーンを独立に実行した得られた出力を連結して返す
-        output_1 = self.chain_1.run(inputs)
-        output_2 = self.chain_2.run(inputs)
-        return {'concat_output': output_1 + output_2}
-
-
-# llm ラッパーのインポート
-# LLM チェーンの構築で必要なプロンプトテンプレートのインポート
-
-# llm ラッパーの初期化
-llm = OpenAI(temperature=0)
-
-prompt_1 = PromptTemplate(
-    input_variables=["product"],
-    template="{product}を作る会社の社名として、何かいいものはないですか？日本語の社名でお願いします。",
+from langchain.prompts.chat import (
+    ChatPromptTemplate,
+    SystemMessagePromptTemplate,
+    HumanMessagePromptTemplate,
+    MessagesPlaceholder,
+    AIMessagePromptTemplate
 )
-chain_1 = LLMChain(llm=llm, prompt=prompt_1)
+from langchain.chains import ConversationChain, LLMChain, SimpleSequentialChain
+from langchain.memory import ConversationBufferMemory
+from langchain.agents import initialize_agent, AgentType, Tool
+from langchain import SerpAPIWrapper
+from langchain.schema import HumanMessage, SystemMessage, AIMessage, BaseMessage
+import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from templates.chat_template import ChatTemplate
 
-prompt_2 = PromptTemplate(
-    input_variables=["product"],
-    template="{product}を作る会社のスローガンとして、何かいいものはないですか？日本語でお願いします。",
-)
-chain_2 = LLMChain(llm=llm, prompt=prompt_2)
+chat_templates = ChatTemplate('apis/openai/gpt/templates/chat_template.csv').templates
+system_message_prompt = SystemMessagePromptTemplate.from_template(chat_templates[0]['content'])
 
-concat_chain = ConcatenateChain(chain_1=chain_1, chain_2=chain_2)
-concat_output = concat_chain.run("カラフルな靴下")
-print(f"Concatenated output:\n{concat_output}")
+messages_template = [system_message_prompt]
+
+for i in range(1, len(chat_templates), 2):
+    messages_template.append(
+        HumanMessagePromptTemplate.from_template(chat_templates[i]['content']))
+    messages_template.append(
+        AIMessagePromptTemplate.from_template(chat_templates[i + 1]['content']))
+
+
+chat = ChatOpenAI(temperature=0)
+chat_prompt_template = ChatPromptTemplate.from_messages(messages_template)
+chat_prompt = chat_prompt_template.format_prompt()
+messages = chat_prompt.to_messages()
+
+for message in messages:
+    print(message)
+
+# search = SerpAPIWrapper()
+# tools = [
+#     Tool(
+#         name='Current search',
+#         func=search.run,
+#         description='useful for when you need to answer questions about current events or the current state of the world'
+#     )
+# ]
+# memory = ConversationBufferMemory(return_messages=True, memory_key='chat_history')
+# agent_chain = initialize_agent(
+#     tools=tools,
+#     llm=chat,
+#     agent=AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION,
+#     memory=memory,
+#     verbose=True
+# )
+
+# system_msg = ''
+# for templete in chat_templates:
+
+#     if templete['role'] == 'system':
+#         system_msg += templete['content'] + '\n\n'
+#         continue
+
+#     if templete['role'] == 'user':
+#         role = 'ユーザー'
+
+#     elif templete['role'] == 'assistant':
+#         role = 'アシスタント'
+
+#     else:
+#         raise ValueError
+
+#     result = f'{role}: {templete["content"]}'
+#     system_msg += f'{result}\n'
+
+# question_prompt = '現在日本の総理大臣は誰？'
+# assistant_output = agent_chain.run(question_prompt)
+# human_message_template = """
+
+# 「{assistant_prompt}」を日本語に翻訳して上記の会話につづけてください。
+# ユーザー：{question_prompt}
+# """
+
+# system_message_prompt = SystemMessagePromptTemplate.from_template(system_msg)
+# human_message_prompt = HumanMessagePromptTemplate.from_template(human_message_template)
+# messages = [system_message_prompt, human_message_prompt]
+
+# chat_prompt_template = ChatPromptTemplate.from_messages(messages)
+# chat_prompt = chat_prompt_template.format_prompt(assistant_prompt=assistant_output, question_prompt=question_prompt).to_messages()
+# completion = chat(messages=chat_prompt)
+
+# print(completion.content)
+

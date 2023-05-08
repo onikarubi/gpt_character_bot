@@ -1,17 +1,19 @@
-from langchain.agents import AgentType, initialize_agent, load_tools, AgentExecutor
+from langchain.agents import AgentType, initialize_agent, load_tools, AgentExecutor, Tool
 from langchain import OpenAI
 from langchain.chains import LLMChain, SimpleSequentialChain
 from langchain.prompts import PromptTemplate
+from langchain.serpapi import SerpAPIWrapper
 from asyncio import Task
 import asyncio
 import datetime
+
 
 class SearchQuestionAndAnswer:
     """
     質問に対する回答を検索し、指定された言語に翻訳するクラス。
     """
 
-    def __init__(self, question: str, output_language: str, is_verbose: bool = False, max_token: int = 200) -> None:
+    def __init__(self, question: str, output_language: str, is_verbose: bool = False, max_token: int = 200, is_waiting_display=False) -> None:
         """
         コンストラクタ。
 
@@ -19,20 +21,26 @@ class SearchQuestionAndAnswer:
         :param output_language: 出力結果の言語。
         :param is_verbose: デバッグ情報を出力するかどうか。
         """
-        if max_token > 0:
+        if not max_token > 0:
             raise ValueError('トークン数を0 < n <= 500の範囲内で指定してください')
 
         self.llm = OpenAI(temperature=0, max_tokens=max_token)
         self.question = question
         self.output_language = output_language
+        self.is_waiting_display = is_waiting_display
         self.search_result_template = self._create_search_result_template()
         self.search_result_chain = LLMChain(
             llm=self.llm, prompt=self.search_result_template)
-        self.tools = load_tools(["serpapi"])
+        self.search = SerpAPIWrapper()
+        self.tools = [
+            Tool(
+                name='Current search',
+                func=self.search.run
+            )
+        ]
         self.agent_chain = self._agent_init(
             agent_name=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION)
         self.overall_chain = self._create_overall_chain(verbose=is_verbose)
-
 
     def run(self):
         """

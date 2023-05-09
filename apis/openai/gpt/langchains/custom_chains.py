@@ -34,7 +34,7 @@ for i in range(1, len(chat_templates), 2):
         AIMessagePromptTemplate.from_template(chat_templates[i + 1]['content']))
 
 
-""" 
+"""
 エージェントツールを用いて質問のプロンプトに対して検索をかける
 """
 
@@ -58,7 +58,7 @@ agent_chain = initialize_agent(
 question_prompt = '現在日本の総理大臣は誰？'
 assistant_output = agent_chain.run(question_prompt)
 
-human_message_prompt = """ 
+human_message_prompt = """
 {input_question}という質問に対して、
 {input_answer}を日本語に直して上記の会話のように回答して。
 """

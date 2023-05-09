@@ -1,11 +1,111 @@
 from langchain.agents import AgentType, initialize_agent, load_tools, AgentExecutor, Tool
 from langchain import OpenAI
-from langchain.chains import LLMChain, SimpleSequentialChain
+from langchain.chat_models import ChatOpenAI
+from langchain.chains import LLMChain, ConversationChain
+from langchain.prompts.chat import (
+    ChatPromptTemplate,
+    SystemMessagePromptTemplate,
+    HumanMessagePromptTemplate,
+    MessagesPlaceholder,
+    AIMessagePromptTemplate,
+    BaseStringMessagePromptTemplate
+)
 from langchain.prompts import PromptTemplate
-from langchain.serpapi import SerpAPIWrapper
+from langchain.utilities import SerpAPIWrapper, GoogleSearchAPIWrapper
+from langchain.memory import ConversationBufferMemory
+from templates.chat_template import ChatTemplate
 from asyncio import Task
 import asyncio
 import datetime
+import os
+
+class ChatModel:
+    def __init__(self, temperature: float = 0, max_tokens: int = 0) -> None:
+        self.temperature = temperature
+        self.max_tokens = max_tokens
+
+    def create_chat(self) -> ChatOpenAI:
+        return ChatOpenAI(
+            temperature=self.temperature,
+            max_tokens=self.max_tokens
+        )
+
+
+class ConversationMemory:
+    def __init__(self, memory_key: str, return_messages: bool = True) -> None:
+        self.memory_key = memory_key
+        self.return_messages = return_messages
+
+    def buffer_memory(self) -> ConversationBufferMemory:
+        return ConversationBufferMemory(
+            return_messages=self.return_messages,
+            memory_key=self.memory_key
+        )
+
+class ChatPromptTemplateChain:
+    CHAT_TEMPLATES: dict[str, str]
+
+    def __init__(self) -> None:
+        self.CHAT_TEMPLATES = ChatTemplate(
+            os.getenv('CHAT_TEMPLATE_PATH')).templates
+        self._messages_template = self._generate_messages_template()
+
+    def _generate_messages_template(self) -> list[BaseStringMessagePromptTemplate]:
+        messages_template = []
+
+        system_message_prompt = self.get_chat_template(SystemMessagePromptTemplate, index=0)
+        messages_template.append(system_message_prompt)
+
+        for i in range(1, len(self.CHAT_TEMPLATES), 2):
+            human_message_prompt = self.get_chat_template(HumanMessagePromptTemplate, index=i)
+            ai_message_prompt = self.get_chat_template(AIMessagePromptTemplate, index=i + 1)
+            messages_template.append(human_message_prompt)
+            messages_template.append(ai_message_prompt)
+
+        return messages_template
+
+    @property
+    def messages_template(self):
+        if not len(self._messages_template) > 0:
+            return
+
+        return self._messages_template
+
+
+    def get_chat_template(self, msg_prt_temp: BaseStringMessagePromptTemplate, index: int):
+        return msg_prt_temp.from_template(self.CHAT_TEMPLATES[index]['content'])
+
+class ConversationAgents:
+    SEARCH: SerpAPIWrapper | GoogleSearchAPIWrapper
+    AGENT: AgentType
+
+    def __init__(self, chat: ChatModel, verbose: bool = True) -> None:
+        self.chat = chat
+        self.verbose = verbose
+        self.SEARCH = SerpAPIWrapper()
+        self.tools = [
+            Tool(
+                name='Current search',
+                func=self.SEARCH.run,
+                description='useful for when you need to answer questions about current events or the current state of the world'
+            )
+        ]
+        self.memory = ConversationMemory(memory_key='chat_history').buffer_memory()
+        self.AGENT = AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION
+        self._agent_chain = self._agent_init()
+
+    @property
+    def agent_chain(self):
+        return self._agent_chain
+
+    def _agent_init(self):
+        return initialize_agent(
+            tools=self.tools,
+            llm=self.chat,
+            agent=self.AGENT_TYPE,
+            memory=self.memory,
+            verbose=self.verbose
+        )
 
 
 class SearchQuestionAndAnswer:
@@ -24,13 +124,14 @@ class SearchQuestionAndAnswer:
         if not max_token > 0:
             raise ValueError('トークン数を0 < n <= 500の範囲内で指定してください')
 
-        self.llm = OpenAI(temperature=0, max_tokens=max_token)
+        self.llm = ChatOpenAI(temperature=0, max_tokens=max_token)
         self.question = question
         self.output_language = output_language
         self.is_waiting_display = is_waiting_display
+        self._system_prompt_template
+
         self.search_result_template = self._create_search_result_template()
-        self.search_result_chain = LLMChain(
-            llm=self.llm, prompt=self.search_result_template)
+        self.search_result_chain = LLMChain(llm=self.llm, prompt=self.search_result_template)
         self.search = SerpAPIWrapper()
         self.tools = [
             Tool(
@@ -38,9 +139,7 @@ class SearchQuestionAndAnswer:
                 func=self.search.run
             )
         ]
-        self.agent_chain = self._agent_init(
-            agent_name=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION)
-        self.overall_chain = self._create_overall_chain(verbose=is_verbose)
+        self.agent_chain = self._agent_init(agent_name=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION)
 
     def run(self):
         """
@@ -92,11 +191,6 @@ class SearchQuestionAndAnswer:
         return response
 
     def _create_search_result_template(self) -> PromptTemplate:
-        """
-        検索結果の翻訳用テンプレートを生成します。
-
-        :return: 生成された PromptTemplate オブジェクト。
-        """
         return PromptTemplate(
             input_variables=['search_result'],
             template='{search_result}を' + self.output_language + "で翻訳してください"
@@ -113,18 +207,6 @@ class SearchQuestionAndAnswer:
             self.tools,
             self.llm,
             agent=agent_name
-        )
-
-    def _create_overall_chain(self, verbose: bool) -> SimpleSequentialChain:
-        """
-        エージェントチェーンと検索結果を翻訳したチェーンを組み合わせたチェーンを生成します。
-
-        :param verbose: デバッグ情報を出力するかどうか。
-        :return: 生成された SimpleSequentialChain オブジェクト。
-        """
-        return SimpleSequentialChain(
-            chains=[self.agent_chain, self.search_result_chain],
-            verbose=verbose
         )
 
 

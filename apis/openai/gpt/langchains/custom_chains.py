@@ -11,7 +11,6 @@ from langchain.chains import ConversationChain, LLMChain, SimpleSequentialChain
 from langchain.memory import ConversationBufferMemory
 from langchain.agents import initialize_agent, AgentType, Tool
 from langchain import SerpAPIWrapper
-from langchain.schema import HumanMessage, SystemMessage, AIMessage, BaseMessage
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))

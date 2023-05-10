@@ -8,7 +8,8 @@ from langchain.prompts.chat import (
     HumanMessagePromptTemplate,
     MessagesPlaceholder,
     AIMessagePromptTemplate,
-    BaseStringMessagePromptTemplate
+    BaseStringMessagePromptTemplate,
+    BaseMessagePromptTemplate
 )
 from langchain.prompts import PromptTemplate
 from langchain.utilities import SerpAPIWrapper, GoogleSearchAPIWrapper
@@ -45,23 +46,23 @@ class ConversationMemory:
             memory_key=self.memory_key
         )
 
-class ChatPromptTemplateChain:
+class ChatPromptTemplateGenerator:
     CHAT_TEMPLATES: dict[str, str]
 
     def __init__(self) -> None:
         self.CHAT_TEMPLATES = ChatTemplate(
             os.getenv('CHAT_TEMPLATE_PATH')).templates
-        self._messages_template = self._generate_messages_template()
+        self._messages_template = self._generate_conversation_templates()
 
-    def _generate_messages_template(self) -> list[BaseStringMessagePromptTemplate]:
+    def _generate_conversation_templates(self) -> list[BaseStringMessagePromptTemplate]:
         messages_template = []
 
-        system_message_prompt = self.get_chat_template(SystemMessagePromptTemplate, index=0)
+        system_message_prompt = self._get_chat_template(SystemMessagePromptTemplate, index=0)
         messages_template.append(system_message_prompt)
 
         for i in range(1, len(self.CHAT_TEMPLATES), 2):
-            human_message_prompt = self.get_chat_template(HumanMessagePromptTemplate, index=i)
-            ai_message_prompt = self.get_chat_template(AIMessagePromptTemplate, index=i + 1)
+            human_message_prompt = self._get_chat_template(HumanMessagePromptTemplate, index=i)
+            ai_message_prompt = self._get_chat_template(AIMessagePromptTemplate, index=i + 1)
             messages_template.append(human_message_prompt)
             messages_template.append(ai_message_prompt)
 
@@ -70,16 +71,19 @@ class ChatPromptTemplateChain:
     def add_messages_template(self, msg_pmt_temp: BaseStringMessagePromptTemplate, prompt: str) -> None:
         self.messages_template.append(msg_pmt_temp.from_template(prompt))
 
+    def _get_chat_template(self, msg_prt_temp: BaseStringMessagePromptTemplate, index: int) -> BaseMessagePromptTemplate:
+        return msg_prt_temp.from_template(self.CHAT_TEMPLATES[index]['content'])
+
+    def get_chat_prompt_template(self) -> ChatPromptTemplate:
+        return ChatPromptTemplate.from_messages(self.messages_template)
+
     @property
-    def messages_template(self):
+    def messages_template(self) -> list[BaseStringMessagePromptTemplate]:
         if not len(self._messages_template) > 0:
             return
 
         return self._messages_template
 
-
-    def get_chat_template(self, msg_prt_temp: BaseStringMessagePromptTemplate, index: int):
-        return msg_prt_temp.from_template(self.CHAT_TEMPLATES[index]['content'])
 
 class ConversationAgents:
     SEARCH: SerpAPIWrapper | GoogleSearchAPIWrapper
@@ -89,7 +93,7 @@ class ConversationAgents:
         self.chat = chat
         self.verbose = verbose
         self.SEARCH = SerpAPIWrapper()
-        self.tools = [
+        self._tools = [
             Tool(
                 name='Current search',
                 func=self.SEARCH.run,
@@ -98,11 +102,19 @@ class ConversationAgents:
         ]
         self.memory = ConversationMemory(memory_key='chat_history').buffer_memory()
         self.AGENT = AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION
-        self._agent_chain = self._agent_init()
+
+    def agent_chain(self):
+        return self._agent_init()
 
     @property
-    def agent_chain(self):
-        return self._agent_chain
+    def tools(self):
+        if not len(self._tools) > 0:
+            return
+
+        return self._tools
+
+    def add_tool(self, tool: Tool):
+        self.tools.append(tool)
 
     def _agent_init(self):
         return initialize_agent(
@@ -118,29 +130,32 @@ class SearchQuestionAndAnswer:
     """
     質問に対する回答を検索し、指定された言語に翻訳するクラス。
     """
+    CHAT_MODEL: ChatModel
+    AGENTS: ConversationAgents
+    DEFAULT_QUESTION_PROMPT = '現在日本の総理大臣は誰？'
+    DEFAULT_ANSWERED_PROMPT = """
+    {input_question}という質問に対して、
+    {input_answer}を日本語に直して上記の会話のように回答して。
+    """
 
-    def __init__(self, input_prompt: str = '', is_waiting_display=False, max_tokens: int = 300, is_verbose: bool = True) -> None:
-        self._input_prompt = input_prompt
+    def __init__(self, question_prompt: str = DEFAULT_QUESTION_PROMPT, answered_prompt: str = DEFAULT_ANSWERED_PROMPT, is_waiting_display=False, max_tokens: int = 300, is_verbose: bool = True) -> None:
+        self._question_prompt = question_prompt
+        self._answered_prompt = answered_prompt
         self._is_waiting_display = is_waiting_display
         self._max_tokens = max_tokens
         self._is_verbose = is_verbose
-        self.chat_model = ChatModel(max_tokens=self.max_tokens)
-        self.agent_chain = ConversationAgents(self.chat_model, self.is_verbose)
-
-        self.search_result_template = self._create_search_result_template()
-        self.search_result_chain = LLMChain(llm=self.llm, prompt=self.search_result_template)
-        self.search = SerpAPIWrapper()
-        self.tools = [
-            Tool(
-                name='Current search',
-                func=self.search.run
-            )
-        ]
-        self.agent_chain = self._agent_init(agent_name=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION)
+        self.CHAT_MODEL = ChatModel(max_tokens=self.max_tokens)
+        self.AGENTS = ConversationAgents(self.CHAT_MODEL, self.is_verbose)
+        self.agent_chain = self.AGENTS.agent_chain()
+        self.chat_prompt_generator = ChatPromptTemplateGenerator()
 
     @property
-    def input_prompt(self):
-        return self._input_prompt
+    def question_prompt(self):
+        return self._question_prompt
+
+    @property
+    def answered_prompt(self):
+        return self._answered_prompt
 
     @property
     def is_waiting_display(self):
@@ -202,34 +217,35 @@ class SearchQuestionAndAnswer:
 
             await asyncio.sleep(1)
 
-    async def _thinking(self):
-        """
-        質問に対する回答を取得します。
+    async def _thinking(self) -> str:
+        agent_answer = await self._thinking_agent()
+        result = await self._thinking_template_chain(agent_answer)
+        return result
 
-        :return: 取得した回答の文字列。
-        """
-        response = await self.overall_chain.arun(self.question)
-        return response
+    async def _thinking_agent(self):
+        try:
+            result_output = await self.agent_chain.arun(self.question_prompt)
+            return result_output
 
-    def _create_search_result_template(self) -> PromptTemplate:
-        return PromptTemplate(
-            input_variables=['search_result'],
-            template='{search_result}を' + self.output_language + "で翻訳してください"
-        )
+        except:
+            print('エージェントツールにてエラーが発生')
+            raise
 
-    def _agent_init(self, agent_name: str) -> AgentExecutor:
-        """
-        指定されたエージェント名でエージェントを初期化します。
+    async def _thinking_template_chain(self, agent_answer: str):
+        try:
+            self.chat_prompt_generator.add_messages_template(
+                msg_pmt_temp=HumanMessagePromptTemplate,
+                prompt=self.answered_prompt
+            )
+            chat_prompt_template = self.chat_prompt_generator.get_chat_prompt_template()
+            result_chain = LLMChain(llm=self.CHAT_MODEL,
+                                    prompt=chat_prompt_template)
+            response = await result_chain.arun(input_question=self.question_prompt, input_answer=agent_answer)
+            return response
 
-        :param agent_name: 初期化するエージェント名。
-        :return: 初期化された AgentExecutor オブジェクト。
-        """
-        return initialize_agent(
-            self.tools,
-            self.llm,
-            agent=agent_name
-        )
-
+        except:
+            print('テンプレート処理にてエラーが発生')
+            raise
 
 if __name__ == '__main__':
     q_and_a = SearchQuestionAndAnswer(

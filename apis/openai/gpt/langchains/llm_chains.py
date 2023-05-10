@@ -21,6 +21,9 @@ import os
 
 class ChatModel:
     def __init__(self, temperature: float = 0, max_tokens: int = 0) -> None:
+        if not max_tokens > 0:
+            raise ValueError('トークン数を0 < n <= 500の範囲内で指定してください')
+
         self.temperature = temperature
         self.max_tokens = max_tokens
 
@@ -63,6 +66,9 @@ class ChatPromptTemplateChain:
             messages_template.append(ai_message_prompt)
 
         return messages_template
+
+    def add_messages_template(self, msg_pmt_temp: BaseStringMessagePromptTemplate, prompt: str) -> None:
+        self.messages_template.append(msg_pmt_temp.from_template(prompt))
 
     @property
     def messages_template(self):
@@ -113,22 +119,13 @@ class SearchQuestionAndAnswer:
     質問に対する回答を検索し、指定された言語に翻訳するクラス。
     """
 
-    def __init__(self, question: str, output_language: str, is_verbose: bool = False, max_token: int = 200, is_waiting_display=False) -> None:
-        """
-        コンストラクタ。
-
-        :param question: 検索する質問。
-        :param output_language: 出力結果の言語。
-        :param is_verbose: デバッグ情報を出力するかどうか。
-        """
-        if not max_token > 0:
-            raise ValueError('トークン数を0 < n <= 500の範囲内で指定してください')
-
-        self.llm = ChatOpenAI(temperature=0, max_tokens=max_token)
-        self.question = question
-        self.output_language = output_language
-        self.is_waiting_display = is_waiting_display
-        self._system_prompt_template
+    def __init__(self, input_prompt: str = '', is_waiting_display=False, max_tokens: int = 300, is_verbose: bool = True) -> None:
+        self._input_prompt = input_prompt
+        self._is_waiting_display = is_waiting_display
+        self._max_tokens = max_tokens
+        self._is_verbose = is_verbose
+        self.chat_model = ChatModel(max_tokens=self.max_tokens)
+        self.agent_chain = ConversationAgents(self.chat_model, self.is_verbose)
 
         self.search_result_template = self._create_search_result_template()
         self.search_result_chain = LLMChain(llm=self.llm, prompt=self.search_result_template)
@@ -140,6 +137,30 @@ class SearchQuestionAndAnswer:
             )
         ]
         self.agent_chain = self._agent_init(agent_name=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION)
+
+    @property
+    def input_prompt(self):
+        return self._input_prompt
+
+    @property
+    def is_waiting_display(self):
+        return self._is_waiting_display
+
+    @property
+    def max_tokens(self):
+        return self._max_tokens
+
+    @max_tokens.setter
+    def max_tokens(self, tokens: int):
+        self._max_tokens = tokens
+
+    @property
+    def is_verbose(self):
+        return self._is_verbose
+
+    @is_verbose.setter
+    def is_verbose(self, is_verbose: bool):
+        self._is_verbose = is_verbose
 
     def run(self):
         """

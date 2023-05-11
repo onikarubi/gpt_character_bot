@@ -1,3 +1,4 @@
+from types import coroutine
 from langchain.agents import AgentType, initialize_agent, load_tools, AgentExecutor, Tool
 from langchain import OpenAI
 from langchain.chat_models import ChatOpenAI
@@ -14,7 +15,7 @@ from langchain.prompts.chat import (
 from langchain.prompts import PromptTemplate
 from langchain.utilities import SerpAPIWrapper, GoogleSearchAPIWrapper
 from langchain.memory import ConversationBufferMemory
-from templates.chat_template import ChatTemplate
+from ..templates.chat_template import ChatTemplate
 from asyncio import Task
 import asyncio
 import datetime
@@ -72,7 +73,7 @@ class ChatPromptTemplateGenerator:
         self.messages_template.append(msg_pmt_temp.from_template(prompt))
 
     def _get_chat_template(self, msg_prt_temp: BaseStringMessagePromptTemplate, index: int) -> BaseMessagePromptTemplate:
-        return msg_prt_temp.from_template(self.CHAT_TEMPLATES[index]['content'])
+        return msg_prt_temp.from_template(self.CHAT_TEMPLATES[index]['completion'])
 
     def get_chat_prompt_template(self) -> ChatPromptTemplate:
         return ChatPromptTemplate.from_messages(self.messages_template)
@@ -87,9 +88,9 @@ class ChatPromptTemplateGenerator:
 
 class ConversationAgents:
     SEARCH: SerpAPIWrapper | GoogleSearchAPIWrapper
-    AGENT: AgentType
+    AGENT_TYPE: AgentType
 
-    def __init__(self, chat: ChatModel, verbose: bool = True) -> None:
+    def __init__(self, chat: ChatOpenAI, verbose: bool = True) -> None:
         self.chat = chat
         self.verbose = verbose
         self.SEARCH = SerpAPIWrapper()
@@ -97,11 +98,12 @@ class ConversationAgents:
             Tool(
                 name='Current search',
                 func=self.SEARCH.run,
-                description='useful for when you need to answer questions about current events or the current state of the world'
+                description='useful for when you need to answer questions about current events or the current state of the world',
+                coroutine=self.SEARCH.arun
             )
         ]
         self.memory = ConversationMemory(memory_key='chat_history').buffer_memory()
-        self.AGENT = AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION
+        self.AGENT_TYPE = AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION
 
     def agent_chain(self):
         return self._agent_init()
@@ -138,14 +140,15 @@ class SearchQuestionAndAnswer:
     {input_answer}を日本語に直して上記の会話のように回答して。
     """
 
-    def __init__(self, question_prompt: str = DEFAULT_QUESTION_PROMPT, answered_prompt: str = DEFAULT_ANSWERED_PROMPT, is_waiting_display=False, max_tokens: int = 300, is_verbose: bool = True) -> None:
+    def __init__(self, question_prompt: str = DEFAULT_QUESTION_PROMPT, is_waiting_display=False, max_tokens: int = 300, is_verbose: bool = True) -> None:
         self._question_prompt = question_prompt
-        self._answered_prompt = answered_prompt
+        self._answered_prompt = self.DEFAULT_ANSWERED_PROMPT
         self._is_waiting_display = is_waiting_display
         self._max_tokens = max_tokens
         self._is_verbose = is_verbose
         self.CHAT_MODEL = ChatModel(max_tokens=self.max_tokens)
-        self.AGENTS = ConversationAgents(self.CHAT_MODEL, self.is_verbose)
+        self.llm_chat = self.CHAT_MODEL.create_chat()
+        self.AGENTS = ConversationAgents(self.llm_chat, self.is_verbose)
         self.agent_chain = self.AGENTS.agent_chain()
         self.chat_prompt_generator = ChatPromptTemplateGenerator()
 
@@ -238,7 +241,7 @@ class SearchQuestionAndAnswer:
                 prompt=self.answered_prompt
             )
             chat_prompt_template = self.chat_prompt_generator.get_chat_prompt_template()
-            result_chain = LLMChain(llm=self.CHAT_MODEL,
+            result_chain = LLMChain(llm=self.llm_chat,
                                     prompt=chat_prompt_template)
             response = await result_chain.arun(input_question=self.question_prompt, input_answer=agent_answer)
             return response
@@ -249,9 +252,6 @@ class SearchQuestionAndAnswer:
 
 if __name__ == '__main__':
     q_and_a = SearchQuestionAndAnswer(
-        question='2022年日本の総理大臣は誰ですか？',
-        output_language='日本語',
-        is_verbose=False
+        question_prompt='現在日本の総理大臣は誰ですか？',
     )
-
     q_and_a.run()

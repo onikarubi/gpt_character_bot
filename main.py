@@ -3,6 +3,7 @@ from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import TextMessage, MessageEvent
 from apis.linebot.linebot import LineBotReplyText, LineBotHandler
 from apis.openai.gpt.conversion_bot import ConversionBot
+from apis.openai.gpt.langchains.llm_chains import SearchQuestionAndAnswer
 import logs.request_logger
 import os
 import uvicorn
@@ -59,4 +60,6 @@ def handle_message_text(event: MessageEvent):
         raise LineBotApiError(error_msg)
 
 if __name__ == '__main__':
-    uvicorn.run('main:app', host='0.0.0.0', port=8000, reload=True)
+    q_and_a = SearchQuestionAndAnswer(question_prompt='現在日本の総理大臣は誰ですか？')
+    q_and_a.run()
+    # uvicorn.run('main:app', host='0.0.0.0', port=8000, reload=True)

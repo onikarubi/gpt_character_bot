@@ -6,3 +6,4 @@ python-dotenv
 httpx
 langchain
 google-search-results
+google-api-python-client

@@ -13,7 +13,7 @@ from langchain.prompts.chat import (
     BaseMessagePromptTemplate
 )
 from langchain.prompts import PromptTemplate
-from langchain.utilities import SerpAPIWrapper, GoogleSearchAPIWrapper
+from langchain.utilities import SerpAPIWrapper, GoogleSearchAPIWrapper, GoogleSerperAPIWrapper
 from langchain.memory import ConversationBufferMemory
 from ..templates.chat_template import ChatTemplate
 from asyncio import Task
@@ -73,7 +73,7 @@ class ChatPromptTemplateGenerator:
         self.messages_template.append(msg_pmt_temp.from_template(prompt))
 
     def _get_chat_template(self, msg_prt_temp: BaseStringMessagePromptTemplate, index: int) -> BaseMessagePromptTemplate:
-        return msg_prt_temp.from_template(self.CHAT_TEMPLATES[index]['completion'])
+        return msg_prt_temp.from_template(self.CHAT_TEMPLATES[index]['content'])
 
     def get_chat_prompt_template(self) -> ChatPromptTemplate:
         return ChatPromptTemplate.from_messages(self.messages_template)
@@ -87,13 +87,13 @@ class ChatPromptTemplateGenerator:
 
 
 class ConversationAgents:
-    SEARCH: SerpAPIWrapper | GoogleSearchAPIWrapper
+    SEARCH: SerpAPIWrapper | GoogleSearchAPIWrapper | GoogleSerperAPIWrapper
     AGENT_TYPE: AgentType
 
     def __init__(self, chat: ChatOpenAI, verbose: bool = True) -> None:
         self.chat = chat
         self.verbose = verbose
-        self.SEARCH = SerpAPIWrapper()
+        self.SEARCH = GoogleSerperAPIWrapper()
         self._tools = [
             Tool(
                 name='Current search',
@@ -193,6 +193,9 @@ class SearchQuestionAndAnswer:
 
         print(response)
 
+    def running_exception_msg(self, place: str, reason: str) -> str:
+        return f"{place}でエラーが発生。\n原因: \n{reason}"
+
     async def _thinking_task(self) -> str:
         """
         質問に対する回答を非同期に取得するタスクを実行します。
@@ -230,8 +233,13 @@ class SearchQuestionAndAnswer:
             result_output = await self.agent_chain.arun(self.question_prompt)
             return result_output
 
-        except:
-            print('エージェントツールにてエラーが発生')
+        except ValueError:
+            err_msg = "APIのリクエスト上限に到達しました。"
+            print(self.running_exception_msg(place='エージェントツール', reason=err_msg))
+            raise ValueError(err_msg)
+
+        except Exception as e:
+            print(self.running_exception_msg(place='エージェントツール', reason=e))
             raise
 
     async def _thinking_template_chain(self, agent_answer: str):

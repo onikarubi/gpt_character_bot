@@ -60,6 +60,16 @@ def handle_message_text(event: MessageEvent):
         raise LineBotApiError(error_msg)
 
 if __name__ == '__main__':
-    q_and_a = SearchQuestionAndAnswer(question_prompt='現在日本の総理大臣は誰ですか？')
-    q_and_a.run()
+    q_and_a = SearchQuestionAndAnswer(
+        is_streaming=False,
+        max_tokens=500,
+    )
+    question = input('user >> ')
+
+    while True:
+        q_and_a.run(question)
+        question = input('user >> ')
+
+        if question == 'exit':
+            break
     # uvicorn.run('main:app', host='0.0.0.0', port=8000, reload=True)

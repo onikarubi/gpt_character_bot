@@ -60,10 +60,7 @@ def handle_message_text(event: MessageEvent):
         raise LineBotApiError(error_msg)
 
 if __name__ == '__main__':
-    q_and_a = SearchQuestionAndAnswer(
-        is_streaming=False,
-        max_tokens=500,
-    )
+    q_and_a = SearchQuestionAndAnswer(is_streaming=False)
     question = input('user >> ')
 
     while True:

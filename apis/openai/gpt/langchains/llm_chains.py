@@ -13,6 +13,7 @@ from langchain.prompts.chat import (
     BaseStringMessagePromptTemplate,
     BaseMessagePromptTemplate
 )
+
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.utilities import SerpAPIWrapper, GoogleSearchAPIWrapper, GoogleSerperAPIWrapper
 from langchain.memory import ConversationBufferMemory
@@ -98,38 +99,42 @@ class ChatPromptTemplateGenerator:
 
 
 class ConversationAgents:
-    SEARCH: SerpAPIWrapper | GoogleSearchAPIWrapper | GoogleSerperAPIWrapper
     AGENT_TYPE: AgentType
 
     def __init__(self, chat: ChatOpenAI, verbose: bool = True) -> None:
         self.chat = chat
         self.verbose = verbose
-        self.SEARCH = GoogleSerperAPIWrapper()
-        self._tools = [
-            Tool(
-                name='Current search',
-                func=self.SEARCH.run,
-                description='useful for when you need to answer questions about current events or the current state of the world',
-                coroutine=self.SEARCH.arun
-            )
-        ]
+        self.search_tools = {
+            'serpapi': self._search_tool(SerpAPIWrapper),
+            'google-serper': self._search_tool(GoogleSerperAPIWrapper)
+        }
+        self.tools = [self.get_search_tool('serpapi')]
         self.memory = ConversationMemory(memory_key='chat_history').buffer_memory()
         self.AGENT_TYPE = AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION
 
-    def agent_chain(self):
-        return self._agent_init()
+    def _search_tool(self, api_wrapper: SerpAPIWrapper | GoogleSerperAPIWrapper) -> tuple[Tool | SerpAPIWrapper | GoogleSerperAPIWrapper]:
+        search_api_wrapper = api_wrapper()
+        title = 'Current search'
+        description = '時事問題や最新の情報に対応してくれる'
 
-    @property
-    def tools(self):
-        if not len(self._tools) > 0:
-            return
+        return Tool(
+            name=title,
+            description=description,
+            func=search_api_wrapper.run,
+            coroutine=search_api_wrapper.arun
+        ), api_wrapper
 
-        return self._tools
+    def get_search_tool(self, searcher: str) -> Tool:
+        if searcher == 'serpapi':
+            return self.search_tools['serpapi'][0]
 
-    def add_tool(self, tool: Tool):
-        self.tools.append(tool)
+        elif searcher == 'google-serper':
+            return self.search_tools['google-serper'][0]
 
-    def _agent_init(self):
+        else:
+            raise ValueError
+
+    def agent_chain(self) -> AgentExecutor:
         return initialize_agent(
             tools=self.tools,
             llm=self.chat,
@@ -138,6 +143,16 @@ class ConversationAgents:
             verbose=self.verbose
         )
 
+    def change_search_tool(self, change_tool: Tool, label_name: str = 'Current search') -> None:
+        for i in range(len(self.tools)):
+            if not self.tools[i].name == label_name:
+                continue
+
+            self.tools[i] = change_tool
+            return
+
+    def add_tool(self, tool: Tool):
+        self.tools.append(tool)
 
 class SearchQuestionAndAnswer:
     """
@@ -164,8 +179,7 @@ class SearchQuestionAndAnswer:
 
         self.CHAT_MODEL = ChatModel(max_tokens=self.max_tokens, is_streaming=self.is_streaming)
         self.llm_chat = self.CHAT_MODEL.create_chat()
-        self.AGENTS = ConversationAgents(self.llm_chat, self.is_verbose)
-        self.agent_chain = self.AGENTS.agent_chain()
+        self.AGENTS = ConversationAgents(chat=self.llm_chat, verbose=self.is_verbose)
         self.chat_prompt_generator = ChatPromptTemplateGenerator()
 
 

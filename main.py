@@ -4,9 +4,11 @@ from linebot.models import TextMessage, MessageEvent
 from apis.linebot.linebot import LineBotReplyText, LineBotHandler
 from apis.openai.gpt.conversion_bot import ConversionBot
 from apis.openai.gpt.langchains.llm_chains import SearchQuestionAndAnswer
+from ui.chat import chat_template
 import logs.request_logger
 import os
 import uvicorn
+
 
 LINE_BOT_API_TOKEN = os.getenv('LINE_BOT_API_TOKEN')
 LINE_BOT_API_SECRET = os.getenv('LINE_BOT_API_SECRET')
@@ -60,13 +62,14 @@ def handle_message_text(event: MessageEvent):
         raise LineBotApiError(error_msg)
 
 if __name__ == '__main__':
-    q_and_a = SearchQuestionAndAnswer(is_streaming=False)
-    question = input('user >> ')
+    chat_template()
+    # q_and_a = SearchQuestionAndAnswer(is_streaming=False)
+    # question = input('user >> ')
 
-    while True:
-        q_and_a.run(question)
-        question = input('user >> ')
+    # while True:
+    #     q_and_a.run(question)
+    #     question = input('user >> ')
 
-        if question == 'exit':
-            break
+    #     if question == 'exit':
+    #         break
     # uvicorn.run('main:app', host='0.0.0.0', port=8000, reload=True)

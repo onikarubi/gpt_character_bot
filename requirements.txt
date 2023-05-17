@@ -8,3 +8,5 @@ langchain
 google-search-results
 google-api-python-client
 poe-api
+streamlit
+streamlit-chat

@@ -195,8 +195,7 @@ class SearchQuestionAndAnswer:
     CHAT_MODEL: ChatModel
     AGENTS: ConversationAgents
     DEFAULT_ANSWERED_PROMPT = """
-    {input_answer}という回答が英語だった場合日本語に翻訳して、
-    {input_answer}という回答をもとに{input_question}の質問内容から会話を続けて。
+    {input_question}という質問に対して、{input_answer}という回答を上記の会話に続く形にして日本語でしてください。
     """
 
     def __init__(self, question_prompt: str = '', is_streaming=False) -> None:
@@ -310,7 +309,7 @@ class SearchQuestionAndAnswer:
             chat_prompt_template = self.chat_prompt_generator.get_chat_prompt_template()
             result_chain = LLMChain(llm=self.llm_chat,
                                     prompt=chat_prompt_template)
-            response = result_chain.run(
+            response = self.AGENTS.agent_chain().arun(
                 input_question=self.question_prompt + '上記の会話に続けて回答してください', input_answer=agent_answer)
             return response
 
@@ -377,7 +376,7 @@ class SearchQuestionAndAnswer:
             chat_prompt_template = self.chat_prompt_generator.get_chat_prompt_template()
             result_chain = LLMChain(llm=self.llm_chat,
                                     prompt=chat_prompt_template)
-            response = await result_chain.arun(input_question=self.question_prompt + '上記の会話に続けて回答してください', input_answer=agent_answer)
+            response = await result_chain.arun(input_question=self.question_prompt, input_answer=agent_answer)
             return response
 
         except:

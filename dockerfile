@@ -18,4 +18,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN rm requirements.txt
 
 WORKDIR /products
-CMD [ "bash" ]
+
+ENTRYPOINT ["streamlit", "run", "main.py", "--server.port=8000", "--server.address=0.0.0.0"]

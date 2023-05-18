@@ -62,8 +62,8 @@ def handle_message_text(event: MessageEvent):
         raise LineBotApiError(error_msg)
 
 if __name__ == '__main__':
-    chat_template()
-    # q_and_a = SearchQuestionAndAnswer(is_streaming=False)
+    q_and_a = SearchQuestionAndAnswer(is_streaming=False)
+    chat_template(q_and_a.run)
     # question = input('user >> ')
 
     # while True:

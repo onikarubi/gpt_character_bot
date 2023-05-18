@@ -245,7 +245,7 @@ class SearchQuestionAndAnswer:
         else:
             raise ValueError
 
-    def run(self, prompt: str = ''):
+    def run(self, prompt: str = '') -> str:
         """
         質問に対する回答を検索し、指定された言語に翻訳された言語を出力します。
         """
@@ -271,6 +271,7 @@ class SearchQuestionAndAnswer:
             raise
 
         print(response)
+        return response
 
     def _thinking_task(self) -> str:
         """

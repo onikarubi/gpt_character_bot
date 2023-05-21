@@ -4,7 +4,7 @@ from linebot.models import TextMessage, MessageEvent
 from apis.linebot.linebot import LineBotReplyText, LineBotHandler
 from apis.openai.gpt.conversion_bot import ConversionBot
 from apis.openai.gpt.langchains.llm_chains import SearchQuestionAndAnswer
-from ui.chat import chat_template
+from tools.tools import chat_template_uploader
 import logs.request_logger
 import os
 import uvicorn
@@ -66,13 +66,14 @@ def handle_message_text(event: MessageEvent):
 
 
 if __name__ == '__main__':
-    q_and_a = SearchQuestionAndAnswer(is_verbose=True)
-    question = input('user >> ')
+    chat_template_uploader()
+    # q_and_a = SearchQuestionAndAnswer(is_verbose=True)
+    # question = input('user >> ')
 
-    while True:
-        q_and_a.run(question)
-        question = input('user >> ')
+    # while True:
+    #     q_and_a.run(question)
+    #     question = input('user >> ')
 
-        if question == 'exit':
-            break
+    #     if question == 'exit':
+    #         break
     # uvicorn.run('main:app', host='0.0.0.0', port=8000, reload=True)

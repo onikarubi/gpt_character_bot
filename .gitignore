@@ -9,3 +9,4 @@ __pycache__
 **.jsonl
 .pytest_cache
 .benchmarks
+client_secrets.json

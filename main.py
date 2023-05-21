@@ -20,16 +20,19 @@ line_bot_handler = LineBotHandler(
     api_secret=LINE_BOT_API_SECRET
 )
 
+
 @app.post('/callback')
 async def callback(request: Request):
     signature = request.headers.get('X-Line-Signature')
     body = await request.body()
 
     try:
-        line_bot_handler.webhook_handler.handle(body.decode(encoding='utf-8'), signature)
+        line_bot_handler.webhook_handler.handle(
+            body.decode(encoding='utf-8'), signature)
 
     except InvalidSignatureError:
-        logs.request_logger.logger_output(level='error', message=f'署名に失敗しました: {callback}', file_output='line_api_access')
+        logs.request_logger.logger_output(
+            level='error', message=f'署名に失敗しました: {callback}', file_output='line_api_access')
         raise
 
     except AttributeError:
@@ -61,15 +64,15 @@ def handle_message_text(event: MessageEvent):
         error_msg = 'Line bot上で問題が発生しました。'
         raise LineBotApiError(error_msg)
 
+
 if __name__ == '__main__':
-    q_and_a = SearchQuestionAndAnswer(is_streaming=False)
-    chat_template(q_and_a.run)
-    # question = input('user >> ')
+    q_and_a = SearchQuestionAndAnswer(is_verbose=True)
+    question = input('user >> ')
 
-    # while True:
-    #     q_and_a.run(question)
-    #     question = input('user >> ')
+    while True:
+        q_and_a.run(question)
+        question = input('user >> ')
 
-    #     if question == 'exit':
-    #         break
+        if question == 'exit':
+            break
     # uvicorn.run('main:app', host='0.0.0.0', port=8000, reload=True)

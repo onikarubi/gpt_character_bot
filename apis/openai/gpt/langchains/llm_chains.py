@@ -1,4 +1,10 @@
-from langchain.agents import AgentType, initialize_agent, load_tools, AgentExecutor, Tool
+from langchain.agents import (
+    AgentType,
+    initialize_agent,
+    load_tools,
+    AgentExecutor,
+    Tool,
+)
 from langchain import OpenAI
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import LLMChain, ConversationChain
@@ -8,7 +14,7 @@ from langchain.prompts.chat import (
     HumanMessagePromptTemplate,
     AIMessagePromptTemplate,
     BaseStringMessagePromptTemplate,
-    BaseMessagePromptTemplate
+    BaseMessagePromptTemplate,
 )
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.utilities import SerpAPIWrapper, GoogleSerperAPIWrapper
@@ -21,15 +27,19 @@ import os
 
 
 class ChatModel:
-    def __init__(self, temperature: float = 0, max_tokens: int = 100, is_streaming: bool = False) -> None:
+    def __init__(
+        self, temperature: float = 0, max_tokens: int = 100, is_streaming: bool = False
+    ) -> None:
         if not max_tokens > 0:
-            raise ValueError('トークン数を0 < n <= 500の範囲内で指定してください')
+            raise ValueError("トークン数を0 < n <= 500の範囲内で指定してください")
 
         self._temperature = temperature
         self._max_tokens = max_tokens
         self._is_streaming = is_streaming
 
-    def __call__(self, temperature: float, max_tokens: int, is_streaming: bool = False) -> ChatOpenAI:
+    def __call__(
+        self, temperature: float, max_tokens: int, is_streaming: bool = False
+    ) -> ChatOpenAI:
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.is_streaming = is_streaming
@@ -38,10 +48,7 @@ class ChatModel:
 
     def create_chat(self) -> ChatOpenAI:
         if not self.is_streaming:
-            return ChatOpenAI(
-                temperature=self.temperature,
-                max_tokens=self.max_tokens
-            )
+            return ChatOpenAI(temperature=self.temperature, max_tokens=self.max_tokens)
 
         else:
             return ChatOpenAI(
@@ -83,8 +90,7 @@ class ConversationMemory:
 
     def buffer_memory(self) -> ConversationBufferMemory:
         return ConversationBufferMemory(
-            return_messages=self.return_messages,
-            memory_key=self.memory_key
+            return_messages=self.return_messages, memory_key=self.memory_key
         )
 
 
@@ -92,32 +98,39 @@ class ChatPromptTemplateGenerator:
     CHAT_TEMPLATES: dict[str, str]
 
     def __init__(self) -> None:
-        self.CHAT_TEMPLATES = ChatTemplate(
-            os.getenv('CHAT_TEMPLATE_PATH')).templates
+        self.CHAT_TEMPLATES = ChatTemplate(os.getenv("CHAT_TEMPLATE_PATH")).templates
         self._messages_template = self._generate_conversation_templates()
 
+    # 事前会話用のテンプレートを生成
     def _generate_conversation_templates(self) -> list[BaseStringMessagePromptTemplate]:
         messages_template = []
 
         system_message_prompt = self._get_chat_template(
-            SystemMessagePromptTemplate, index=0)
+            SystemMessagePromptTemplate, index=0
+        )
         messages_template.append(system_message_prompt)
 
         for i in range(1, len(self.CHAT_TEMPLATES), 2):
             human_message_prompt = self._get_chat_template(
-                HumanMessagePromptTemplate, index=i)
+                HumanMessagePromptTemplate, index=i
+            )
             ai_message_prompt = self._get_chat_template(
-                AIMessagePromptTemplate, index=i + 1)
+                AIMessagePromptTemplate, index=i + 1
+            )
             messages_template.append(human_message_prompt)
             messages_template.append(ai_message_prompt)
 
         return messages_template
 
-    def add_messages_template(self, msg_pmt_temp: BaseStringMessagePromptTemplate, prompt: str) -> None:
-        self.messages_template.append(msg_pmt_temp.from_template(prompt))
+    def _get_chat_template(
+        self, msg_prt_temp: BaseStringMessagePromptTemplate, index: int
+    ) -> BaseMessagePromptTemplate:
+        return msg_prt_temp.from_template(self.CHAT_TEMPLATES[index]["content"])
 
-    def _get_chat_template(self, msg_prt_temp: BaseStringMessagePromptTemplate, index: int) -> BaseMessagePromptTemplate:
-        return msg_prt_temp.from_template(self.CHAT_TEMPLATES[index]['content'])
+    def add_messages_template(
+        self, msg_pmt_temp: BaseStringMessagePromptTemplate, prompt: str
+    ) -> None:
+        self.messages_template.append(msg_pmt_temp.from_template(prompt))
 
     def get_chat_prompt_template(self) -> ChatPromptTemplate:
         return ChatPromptTemplate.from_messages(self.messages_template)
@@ -137,32 +150,36 @@ class ConversationAgents:
         self.chat = chat
         self.verbose = verbose
         self.search_tools = {
-            'serpapi': self._search_tool(SerpAPIWrapper),
-            'google-serper': self._search_tool(GoogleSerperAPIWrapper)
+            "serpapi": self._search_tool(SerpAPIWrapper),
+            "google-serper": self._search_tool(GoogleSerperAPIWrapper),
         }
-        self.tools = [self.get_search_tool('serpapi')]
-        self.memory = ConversationMemory(
-            memory_key='chat_history').buffer_memory()
+        self.tools = [self.get_search_tool("google-serper")]
+        self.memory = ConversationMemory(memory_key="chat_history").buffer_memory()
         self.AGENT_TYPE = AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION
 
-    def _search_tool(self, api_wrapper: SerpAPIWrapper | GoogleSerperAPIWrapper) -> tuple[Tool | SerpAPIWrapper | GoogleSerperAPIWrapper]:
+    def _search_tool(
+        self, api_wrapper: SerpAPIWrapper | GoogleSerperAPIWrapper
+    ) -> tuple[Tool | SerpAPIWrapper | GoogleSerperAPIWrapper]:
         search_api_wrapper = api_wrapper()
-        title = 'Current search'
-        description = '時事問題や最新の情報に対応してくれる'
+        title = "Current search"
+        description = "時事問題や最新の情報に対応してくれる"
 
-        return Tool(
-            name=title,
-            description=description,
-            func=search_api_wrapper.run,
-            coroutine=search_api_wrapper.arun
-        ), api_wrapper
+        return (
+            Tool(
+                name=title,
+                description=description,
+                func=search_api_wrapper.run,
+                coroutine=search_api_wrapper.arun,
+            ),
+            api_wrapper,
+        )
 
     def get_search_tool(self, searcher: str) -> Tool:
-        if searcher == 'serpapi':
-            return self.search_tools['serpapi'][0]
+        if searcher == "serpapi":
+            return self.search_tools["serpapi"][0]
 
-        elif searcher == 'google-serper':
-            return self.search_tools['google-serper'][0]
+        elif searcher == "google-serper":
+            return self.search_tools["google-serper"][0]
 
         else:
             raise ValueError
@@ -173,10 +190,12 @@ class ConversationAgents:
             llm=self.chat,
             agent=self.AGENT_TYPE,
             memory=self.memory,
-            verbose=self.verbose
+            verbose=self.verbose,
         )
 
-    def change_search_tool(self, change_tool: Tool, label_name: str = 'Current search') -> None:
+    def change_search_tool(
+        self, change_tool: Tool, label_name: str = "Current search"
+    ) -> None:
         for i in range(len(self.tools)):
             if not self.tools[i].name == label_name:
                 continue
@@ -192,29 +211,21 @@ class SearchQuestionAndAnswer:
     """
     質問に対する回答を検索し、指定された言語に翻訳するクラス。
     """
+
     CHAT_MODEL: ChatModel
     AGENTS: ConversationAgents
-    DEFAULT_ANSWERED_PROMPT = """
-    {input_question}という質問に対して、{input_answer}という回答を上記の会話に続く形にして日本語でしてください。
-    """
 
-    def __init__(self, question_prompt: str = '', is_streaming=False) -> None:
+    def __init__(
+        self, question_prompt: str = "", is_verbose: bool = False
+    ) -> None:
         self._question_prompt = question_prompt
-        self._answered_prompt = self.DEFAULT_ANSWERED_PROMPT
-        self._is_streaming = is_streaming
-
-        if self._is_streaming:
-            self.is_verbose = False
-        else:
-            self.is_verbose = True
-
+        self.is_verbose = is_verbose
         self.CHAT_MODEL = ChatModel()
-        self.llm_chat = self.CHAT_MODEL(
-            temperature=0.7, max_tokens=500, is_streaming=True)
-        self.agent_chat = self.CHAT_MODEL(
-            temperature=0, max_tokens=100, is_streaming=False)
-        self.AGENTS = ConversationAgents(
-            chat=self.agent_chat, verbose=self.is_verbose)
+        self.task_model = self.CHAT_MODEL(
+            temperature=0, max_tokens=200, is_streaming=False
+        )
+        self.AGENTS = ConversationAgents(chat=self.task_model, verbose=self.is_verbose)
+        self._agent_chain = self.AGENTS.agent_chain()
         self.chat_prompt_generator = ChatPromptTemplateGenerator()
 
     @property
@@ -226,26 +237,22 @@ class SearchQuestionAndAnswer:
         self._question_prompt = prompt
 
     @property
-    def answered_prompt(self):
-        return self._answered_prompt
-
-    @property
-    def is_streaming(self):
-        return self._is_streaming
+    def agent_chain(self):
+        return self._agent_chain
 
     def change_chat_model(self, target_name: str, new_chat_model: ChatModel) -> None:
-        if target_name == 'llm_chat':
+        if target_name == "llm_chat":
             self.llm_chat = new_chat_model.create_chat()
             return
 
-        elif target_name == 'agent':
-            self.agent_chat = new_chat_model.create_chat()
+        elif target_name == "agent":
+            self.task_model = new_chat_model.create_chat()
             return
 
         else:
             raise ValueError
 
-    def run(self, prompt: str = '') -> str:
+    def run(self, prompt: str = "") -> str:
         """
         質問に対する回答を検索し、指定された言語に翻訳された言語を出力します。
         """
@@ -253,21 +260,10 @@ class SearchQuestionAndAnswer:
             self.question_prompt = prompt
 
         try:
-            if not self.is_streaming:
-                self.change_chat_model(
-                    target_name='llm_chat',
-                    new_chat_model=ChatModel(
-                        temperature=0.7,
-                        max_tokens=500,
-                        is_streaming=False
-                    )
-                )
-                response = asyncio.run(self._athinking_task())
-            else:
-                response = self._thinking_task()
+            response = self._thinking_task()
 
         except:
-            print('処理を中断')
+            print("処理を中断")
             raise
 
         print(response)
@@ -277,45 +273,37 @@ class SearchQuestionAndAnswer:
         """
         質問に対する回答を同期に取得するタスクを実行します。
 
-        :return: 取得した回答の文字列。
+        :return: 取得した回答の文字列。”
         """
         task_agent = self._thinking_agent()
         task_result = self._thinking_template_chain(task_agent)
         return task_result
 
     def _thinking_agent(self) -> str:
-        while True:
-            try:
-                result_output = self.AGENTS.agent_chain().run(self.question_prompt)
-                return result_output
+        try:
+            agent_answer = f'{self.question_prompt}\n最低50文字以上で解説してください'
+            result_output = self.agent_chain.run(input=agent_answer)
+            return result_output
 
-            except ValueError:
-                err_msg = "APIのリクエスト上限に到達しました。"
-                print(self._running_exception_msg(
-                    place='エージェントツール', reason=err_msg))
-                self.AGENTS.change_search_tool(
-                    self.AGENTS.get_search_tool('google-serper'))
-                continue
-
-            except Exception as e:
-                print(self._running_exception_msg(place='エージェントツール', reason=e))
-                raise
+        except Exception as e:
+            print(self._running_exception_msg(place="エージェントツール", reason=e))
+            raise
 
     def _thinking_template_chain(self, agent_answer: str) -> str:
         try:
+            # ユーザーからのリクエストに対するテンプレートのデータを追加
+            answer_prompt = '{agent_answer}を日本語に直して会話を続けてね'
             self.chat_prompt_generator.add_messages_template(
-                msg_pmt_temp=HumanMessagePromptTemplate,
-                prompt=self.answered_prompt
+                msg_pmt_temp=HumanMessagePromptTemplate, prompt=answer_prompt
             )
+
             chat_prompt_template = self.chat_prompt_generator.get_chat_prompt_template()
-            result_chain = LLMChain(llm=self.llm_chat,
-                                    prompt=chat_prompt_template)
-            response = self.AGENTS.agent_chain().arun(
-                input_question=self.question_prompt + '上記の会話に続けて回答してください', input_answer=agent_answer)
+            result_chain = LLMChain(llm=self.task_model, prompt=chat_prompt_template)
+            response = result_chain.run(agent_answer=agent_answer)
             return response
 
         except:
-            print('テンプレート処理にてエラーが発生')
+            print("テンプレート処理にてエラーが発生")
             raise
 
     async def _athinking_task(self) -> str:
@@ -331,7 +319,7 @@ class SearchQuestionAndAnswer:
         return task.result()
 
     async def task_waiting(self, task: Task):
-        """ 概要：
+        """概要：
         タスクの完了を待つために、1秒ごとにwaiting... /またはwaiting... \を表示する。
         引数： task (Task): 完了を待つタスク。
         """
@@ -339,9 +327,9 @@ class SearchQuestionAndAnswer:
             now = datetime.datetime.now()
 
             if now.second % 2 == 0:
-                print('\rwaiting... /', end='', flush=True)
+                print("\rwaiting... /", end="", flush=True)
             else:
-                print('\rwaiting... \\', end='', flush=True)
+                print("\rwaiting... \\", end="", flush=True)
 
             await asyncio.sleep(1)
 
@@ -353,43 +341,36 @@ class SearchQuestionAndAnswer:
     async def _athinking_agent(self):
         while True:
             try:
-                result_output = await self.AGENTS.agent_chain().arun(self.question_prompt)
+                result_output = await self.agent_chain.arun(self.question_prompt)
                 print(result_output)
                 return result_output
 
             except ValueError:
                 err_msg = "APIのリクエスト上限に到達しました。"
-                print(self._running_exception_msg(
-                    place='エージェントツール', reason=err_msg))
+                print(self._running_exception_msg(place="エージェントツール", reason=err_msg))
                 self.AGENTS.change_search_tool(
-                    self.AGENTS.get_search_tool('google-serper'))
+                    self.AGENTS.get_search_tool("google-serper")
+                )
 
             except Exception as e:
-                print(self._running_exception_msg(place='エージェントツール', reason=e))
+                print(self._running_exception_msg(place="エージェントツール", reason=e))
                 raise
 
     async def _athinking_template_chain(self, agent_answer: str):
         try:
             self.chat_prompt_generator.add_messages_template(
-                msg_pmt_temp=HumanMessagePromptTemplate,
-                prompt=self.answered_prompt
+                msg_pmt_temp=HumanMessagePromptTemplate, prompt=self.answered_prompt
             )
             chat_prompt_template = self.chat_prompt_generator.get_chat_prompt_template()
-            result_chain = LLMChain(llm=self.llm_chat,
-                                    prompt=chat_prompt_template)
-            response = await result_chain.arun(input_question=self.question_prompt, input_answer=agent_answer)
+            result_chain = LLMChain(llm=self.llm_chat, prompt=chat_prompt_template)
+            response = await result_chain.arun(
+                input_question=self.question_prompt, input_answer=agent_answer
+            )
             return response
 
         except:
-            print('テンプレート処理にてエラーが発生')
+            print("テンプレート処理にてエラーが発生")
             raise
 
     def _running_exception_msg(self, place: str, reason: str) -> str:
         return f"{place}でエラーが発生。\n原因: \n{reason}"
-
-
-if __name__ == '__main__':
-    q_and_a = SearchQuestionAndAnswer(
-        question_prompt='今日の日本の天気予報を教えて',
-    )
-    q_and_a.run()

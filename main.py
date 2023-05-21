@@ -4,7 +4,7 @@ from linebot.models import TextMessage, MessageEvent
 from apis.linebot.linebot import LineBotReplyText, LineBotHandler
 from apis.openai.gpt.conversion_bot import ConversionBot
 from apis.openai.gpt.langchains.llm_chains import SearchQuestionAndAnswer
-from ui.chat import chat_template
+from tools.tools import chat_template_uploader
 import logs.request_logger
 import os
 import uvicorn
@@ -20,16 +20,19 @@ line_bot_handler = LineBotHandler(
     api_secret=LINE_BOT_API_SECRET
 )
 
+
 @app.post('/callback')
 async def callback(request: Request):
     signature = request.headers.get('X-Line-Signature')
     body = await request.body()
 
     try:
-        line_bot_handler.webhook_handler.handle(body.decode(encoding='utf-8'), signature)
+        line_bot_handler.webhook_handler.handle(
+            body.decode(encoding='utf-8'), signature)
 
     except InvalidSignatureError:
-        logs.request_logger.logger_output(level='error', message=f'署名に失敗しました: {callback}', file_output='line_api_access')
+        logs.request_logger.logger_output(
+            level='error', message=f'署名に失敗しました: {callback}', file_output='line_api_access')
         raise
 
     except AttributeError:
@@ -61,9 +64,10 @@ def handle_message_text(event: MessageEvent):
         error_msg = 'Line bot上で問題が発生しました。'
         raise LineBotApiError(error_msg)
 
+
 if __name__ == '__main__':
-    q_and_a = SearchQuestionAndAnswer(is_streaming=False)
-    chat_template(q_and_a.run)
+    chat_template_uploader()
+    # q_and_a = SearchQuestionAndAnswer(is_verbose=True)
     # question = input('user >> ')
 
     # while True:

@@ -6,7 +6,7 @@ python-dotenv
 httpx
 langchain
 google-search-results
-google-api-python-client
+PyDrive2
 poe-api
 streamlit
 streamlit-chat

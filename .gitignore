@@ -7,6 +7,6 @@ __pycache__
 **.txt
 **.csv
 **.jsonl
+**.json
 .pytest_cache
 .benchmarks
-client_secrets.json

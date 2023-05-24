@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, Response, status
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import TextMessage, MessageEvent
 from apis.linebot.linebot import LineBotReplyText, LineBotHandler
-from apis.openai.gpt.conversion_bot import ConversionBot
+from apis.openai.gpt.conversion_bot import ConversionBotDefault, ConversationBotLangFlow
 from apis.openai.gpt.langchains.llm_chains import SearchQuestionAndAnswer
 from tools.tools import chat_template_uploader
 import logs.request_logger
@@ -44,8 +44,8 @@ async def callback(request: Request):
 
 
 def reply_message_text(event: MessageEvent):
-    conversion_character = ConversionBot()
-    response_content = conversion_character(event.message.text)
+    conversion_character = ConversationBotLangFlow()
+    response_content = conversion_character(prompt=event.message.text)
     reply_message = LineBotReplyText(
         api_token=LINE_BOT_API_TOKEN,
         api_secret=LINE_BOT_API_SECRET,
@@ -64,16 +64,31 @@ def handle_message_text(event: MessageEvent):
         error_msg = 'Line bot上で問題が発生しました。'
         raise LineBotApiError(error_msg)
 
+def execute_app_cli(question: str):
+    if not question == 'drive' and not question == 'uvicorn' and not question == 'exit':
+        return 'bot'
+
+    if question == 'drive':
+        chat_template_uploader()
+        return 'drive'
+
+    elif question == 'uvicorn':
+        uvicorn.run('main:app', host='0.0.0.0', reload=True)
+        return 'uvicorn'
+
+    elif question == 'exit':
+        return 'exit'
+
 
 if __name__ == '__main__':
-    chat_template_uploader()
-    # q_and_a = SearchQuestionAndAnswer(is_verbose=True)
-    # question = input('user >> ')
+    q_and_a = SearchQuestionAndAnswer(is_verbose=True)
+    question = input('user >> ')
+    app = execute_app_cli(question)
 
-    # while True:
-    #     q_and_a.run(question)
-    #     question = input('user >> ')
+    while True:
+        if app == 'drive' or app == 'uvicorn' or app == 'exit':
+            break
 
-    #     if question == 'exit':
-    #         break
-    # uvicorn.run('main:app', host='0.0.0.0', port=8000, reload=True)
+        q_and_a.run(question)
+        question = input('user >> ')
+        app = execute_app_cli(question)

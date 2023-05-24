@@ -281,7 +281,7 @@ class SearchQuestionAndAnswer:
 
     def _thinking_agent(self) -> str:
         try:
-            agent_answer = f'{self.question_prompt}\n最低50文字以上で解説してください'
+            agent_answer = f'{self.question_prompt}'
             result_output = self.agent_chain.run(input=agent_answer)
             return result_output
 
@@ -292,7 +292,7 @@ class SearchQuestionAndAnswer:
     def _thinking_template_chain(self, agent_answer: str) -> str:
         try:
             # ユーザーからのリクエストに対するテンプレートのデータを追加
-            answer_prompt = '{agent_answer}を日本語に直して会話を続けてね'
+            answer_prompt = '{agent_answer}を日本語に直して会話を続けてね。\n最低30文字以上で解説して'
             self.chat_prompt_generator.add_messages_template(
                 msg_pmt_temp=HumanMessagePromptTemplate, prompt=answer_prompt
             )

@@ -1,8 +1,28 @@
+from typing import Any
 from .llm_gpt import GPT3ChatCompletion
 from .templates.chat_template import ChatTemplate
+from .langchains.llm_chains import SearchQuestionAndAnswer
 import os
 
-class ConversionBot:
+class ConversationBotLangFlow:
+    def __init__(self, prompt: str = '', is_verbose: bool = False) -> None:
+        self.prompt = prompt
+        self.is_verbose = is_verbose
+        self.conversation = SearchQuestionAndAnswer(
+            question_prompt=self.prompt,
+            is_verbose=self.is_verbose
+        )
+
+    def __call__(self, prompt: str = '') -> str:
+        conversation = SearchQuestionAndAnswer(is_verbose=False)
+        response = conversation.run(prompt=prompt)
+        return response
+
+    def run(self):
+        response = self.conversation.run()
+        return response
+
+class ConversionBotDefault:
     DEFAULT_USE_MODEL = 'gpt-3.5-turbo'
     DEFAULT_MAX_TOKEN = 200
     DEFAULT_TEMPERATURE = .2

@@ -13,8 +13,8 @@ class ConversationBotLangFlow:
             is_verbose=self.is_verbose
         )
 
-    def __call__(self, prompt: str = '') -> str:
-        conversation = SearchQuestionAndAnswer(is_verbose=False)
+    def __call__(self, prompt: str = '', is_verbose: bool = False) -> str:
+        conversation = SearchQuestionAndAnswer(is_verbose)
         response = conversation.run(prompt=prompt)
         return response
 

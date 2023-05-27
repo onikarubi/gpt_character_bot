@@ -5,7 +5,7 @@ from apis.linebot.linebot import LineBotReplyText, LineBotHandler
 from apis.openai.gpt.conversion_bot import ConversionBotDefault, ConversationBotLangFlow
 from apis.openai.gpt.langchains.llm_chains import SearchQuestionAndAnswer
 from tools.tools import chat_template_uploader
-import logs.request_logger
+from logs.request_logger import logger_output
 import os
 import uvicorn
 
@@ -31,12 +31,12 @@ async def callback(request: Request):
             body.decode(encoding='utf-8'), signature)
 
     except InvalidSignatureError:
-        logs.request_logger.logger_output(
+        logger_output(
             level='error', message=f'署名に失敗しました: {callback}', file_output='line_api_access')
         raise
 
     except AttributeError:
-        logs.request_logger.logger_output(
+        logger_output(
             level='error', message=f'署名に失敗しました: {callback}\n署名の設定を見直して下さい')
         raise
 
@@ -89,6 +89,7 @@ if __name__ == '__main__':
         if app == 'drive' or app == 'uvicorn' or app == 'exit':
             break
 
-        q_and_a.run(question)
+        response = q_and_a.run(question)
+        print(response)
         question = input('user >> ')
         app = execute_app_cli(question)

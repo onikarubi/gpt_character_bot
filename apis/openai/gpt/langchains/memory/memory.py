@@ -3,6 +3,7 @@ from langchain.schema import messages_to_dict, messages_from_dict
 from langchain.chains import ConversationChain
 from langchain.prompts.chat import AIMessagePromptTemplate, ChatPromptTemplate, HumanMessagePromptTemplate, SystemMessagePromptTemplate, MessagesPlaceholder
 from langchain.chat_models import ChatOpenAI
+import json
 
 history = ChatMessageHistory()
 system_prompt = '質問に対して小学生でもわかるように優しく回答してください'
@@ -26,8 +27,10 @@ sample = input(' >> ')
 
 while True:
     result = conversation.predict(input=sample)
-    print(result)
-    sample = input(' >> ')
+    history = memory.chat_memory
+    messages = json.dumps(messages_to_dict(history.messages), indent=2, ensure_ascii=False)
+    print(f"memory: {messages}")
+    sample = input('')
 
     if sample == 'exit':
         break

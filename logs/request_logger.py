@@ -31,7 +31,7 @@ class ApiAccessLogger:
 
     def _config_formatter(self) -> logging.Formatter:
         if self.level == logging.INFO:
-            return logging.Formatter('%(levelname)s: %(message)s')
+            return logging.Formatter('%(asctime)s  %(levelname)s: %(message)s')
 
         elif self.level == logging.DEBUG:
             return logging.Formatter('%(asctime)s  %(levelname)s: %(module)s %(message)s')
@@ -91,6 +91,9 @@ class ApiAccessLogger:
         if self.console:
             self.logger.addHandler(self.stream_handler)
 
+    class LoggerOutPutException(Exception):
+        pass
+
 
 class LoggerInfo(ApiAccessLogger):
     """
@@ -143,6 +146,9 @@ def logger_output(level: str = '', message: str = '', output_filename: str = '')
     if not level or not message: return
     if not level in ['info', 'debug', 'error']:
         return
+
+    if not output_filename:
+        raise ApiAccessLogger.LoggerOutPutException('ファイル名が正しく設定されていません')
 
     if level == 'info':
         logger = LoggerInfo(output_filename=output_filename)

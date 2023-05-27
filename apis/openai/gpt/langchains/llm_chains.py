@@ -5,7 +5,7 @@ from langchain.agents import (
     AgentExecutor,
     Tool,
 )
-from langchain import OpenAI
+from openai.error import APIError, AuthenticationError
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import LLMChain, ConversationChain
 from langchain.prompts.chat import (
@@ -20,6 +20,7 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.utilities import SerpAPIWrapper, GoogleSerperAPIWrapper
 from langchain.memory import ConversationBufferMemory
 from ..templates.chat_template import ChatTemplate
+from logs.request_logger import logger_output
 from asyncio import Task
 import asyncio
 import datetime
@@ -261,12 +262,18 @@ class SearchQuestionAndAnswer:
 
         try:
             response = self._thinking_task()
+            logger_output(output_filename='openai_access', level='info', message='推論が完了しました。')
 
-        except:
-            print("処理を中断")
+        except AuthenticationError as e:
+            logger_output(output_filename='openai_access', level='error', message='エラーが発生したため処理を中断しました。')
+            self._running_exception_msg(place='APIの認証', reason=e)
             raise
 
-        print(response)
+        except APIError as e:
+            logger_output(output_filename='openai_access', level='error', message='エラーが発生したため処理を中断しました。')
+            self._running_exception_msg('API', reason=e)
+
+        # logger_output(level='info', message=response, output_filename='openai_access')
         return response
 
     def _thinking_task(self) -> str:
@@ -283,16 +290,17 @@ class SearchQuestionAndAnswer:
         try:
             agent_answer = f'{self.question_prompt}'
             result_output = self.agent_chain.run(input=agent_answer)
+            # logger_output(output_filename='openai_access', level='info', message=result_output)
             return result_output
 
         except Exception as e:
-            print(self._running_exception_msg(place="エージェントツール", reason=e))
+            self._running_exception_msg(place="エージェントツール", reason=e)
             raise
 
     def _thinking_template_chain(self, agent_answer: str) -> str:
         try:
             # ユーザーからのリクエストに対するテンプレートのデータを追加
-            answer_prompt = '{agent_answer}を日本語に直して会話を続けてね。\n最低30文字以上で解説して'
+            answer_prompt = '{agent_answer}を日本語に直して会話を続けて'
             self.chat_prompt_generator.add_messages_template(
                 msg_pmt_temp=HumanMessagePromptTemplate, prompt=answer_prompt
             )
@@ -303,7 +311,7 @@ class SearchQuestionAndAnswer:
             return response
 
         except:
-            print("テンプレート処理にてエラーが発生")
+            self._running_exception_msg(place='テンプレート', reason='')
             raise
 
     async def _athinking_task(self) -> str:
@@ -347,13 +355,13 @@ class SearchQuestionAndAnswer:
 
             except ValueError:
                 err_msg = "APIのリクエスト上限に到達しました。"
-                print(self._running_exception_msg(place="エージェントツール", reason=err_msg))
+                self._running_exception_msg(place="エージェントツール", reason=err_msg)
                 self.AGENTS.change_search_tool(
                     self.AGENTS.get_search_tool("google-serper")
                 )
 
             except Exception as e:
-                print(self._running_exception_msg(place="エージェントツール", reason=e))
+                self._running_exception_msg(place="エージェントツール", reason=e)
                 raise
 
     async def _athinking_template_chain(self, agent_answer: str):
@@ -372,5 +380,5 @@ class SearchQuestionAndAnswer:
             print("テンプレート処理にてエラーが発生")
             raise
 
-    def _running_exception_msg(self, place: str, reason: str) -> str:
-        return f"{place}でエラーが発生。\n原因: \n{reason}"
+    def _running_exception_msg(self, place: str, reason: str) -> None:
+        logger_output(output_filename='openai_access', level='error', message=f"{place}でエラーが発生。\n原因: \n{reason}")

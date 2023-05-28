@@ -19,7 +19,6 @@ class TestChatMemoryPostgres:
         self.history.add_user_message('hi')
         self.history.add_ai_message('whats up?')
 
-
     def test_assert_values(self):
         for message in self.history.messages:
             if type(message) == HumanMessage:

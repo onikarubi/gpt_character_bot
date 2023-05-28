@@ -5,6 +5,7 @@ RUN apt-get -y install locales && \
   localedef -f UTF-8 -i ja_JP ja_JP.UTF-8
 RUN apt-get install -y vim
 RUN apt-get install -y git
+RUN apt-get install libpq5
 
 ENV LANG ja_JP.UTF-8
 ENV LANGUAGE ja_JP:ja

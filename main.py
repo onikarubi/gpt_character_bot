@@ -4,11 +4,10 @@ from linebot.models import TextMessage, MessageEvent
 from apis.linebot.linebot import LineBotReplyText, LineBotHandler
 from apis.openai.gpt.conversion_bot import ConversionBotDefault, ConversationBotLangFlow
 from apis.openai.gpt.langchains.llm_chains import SearchQuestionAndAnswer
-from tools.tools import chat_template_uploader, chat_template_downloader
+from tools.tools import ChatToolsController
 from tools.gcp.google_drive_tool import GoogleDriveUploader
 from logs.request_logger import logger_output
 import os
-import uvicorn
 
 
 LINE_BOT_API_TOKEN = os.getenv('LINE_BOT_API_TOKEN')
@@ -65,41 +64,7 @@ def handle_message_text(event: MessageEvent):
         error_msg = 'Line bot上で問題が発生しました。'
         raise LineBotApiError(error_msg)
 
-def execute_app_cli(question: str):
-    if not question == 'drive' and not question == 'uvicorn' and not question == 'exit':
-        return 'bot'
-
-    if question == 'drive':
-        selector = input('1: upload 2: download >> ')
-
-        if selector == '1':
-            uploader = GoogleDriveUploader(
-                target_filename='.env', file_id='1xvS8HPN7XrAy2xWlTec1rTM2S1up-V9w')
-            uploader.upload()
-
-        else:
-            chat_template_downloader()
-
-        return 'drive'
-
-    elif question == 'uvicorn':
-        uvicorn.run('main:app', host='0.0.0.0', reload=True)
-        return 'uvicorn'
-
-    elif question == 'exit':
-        return 'exit'
-
 
 if __name__ == '__main__':
-    q_and_a = SearchQuestionAndAnswer(is_verbose=True)
-    question = input('user >> ')
-    app = execute_app_cli(question)
-
-    while True:
-        if app == 'drive' or app == 'uvicorn' or app == 'exit':
-            break
-
-        response = q_and_a.run(question)
-        print(response)
-        question = input('user >> ')
-        app = execute_app_cli(question)
+    controller = ChatToolsController()
+    controller.execute_controller()

@@ -119,6 +119,7 @@ class GoogleDriveUploader(GoogleDriveLoader):
         target_file.SetContentFile(self.target_filename)
         target_file['title'] = os.path.basename(self.target_filename)
         target_file.Upload()
+        print(f'{self.target_filename}のアップロードが完了しました')
 
 
 class GoogleDriveDownloader(GoogleDriveLoader):
@@ -137,6 +138,7 @@ class GoogleDriveDownloader(GoogleDriveLoader):
         """
         target_file = self._get_google_drive_file(file_id=self.file_id)
         target_file.GetContentFile(self.target_filename)
+        print(f'{self.target_filename}ファイルのダウンロードが完了しました。')
 
 
 class GoogleDriveService(GoogleDriveLoader):

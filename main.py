@@ -4,7 +4,8 @@ from linebot.models import TextMessage, MessageEvent
 from apis.linebot.linebot import LineBotReplyText, LineBotHandler
 from apis.openai.gpt.conversion_bot import ConversionBotDefault, ConversationBotLangFlow
 from apis.openai.gpt.langchains.llm_chains import SearchQuestionAndAnswer
-from tools.tools import chat_template_uploader
+from tools.tools import chat_template_uploader, chat_template_downloader
+from tools.gcp.google_drive_tool import GoogleDriveUploader
 from logs.request_logger import logger_output
 import os
 import uvicorn
@@ -69,7 +70,16 @@ def execute_app_cli(question: str):
         return 'bot'
 
     if question == 'drive':
-        chat_template_uploader()
+        selector = input('1: upload 2: download >> ')
+
+        if selector == '1':
+            uploader = GoogleDriveUploader(
+                target_filename='.env', file_id='1xvS8HPN7XrAy2xWlTec1rTM2S1up-V9w')
+            uploader.upload()
+
+        else:
+            chat_template_downloader()
+
         return 'drive'
 
     elif question == 'uvicorn':

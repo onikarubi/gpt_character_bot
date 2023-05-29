@@ -94,6 +94,12 @@ class GoogleDriveLoader:
 
         return drive.CreateFile({'id': file_id})
 
+    def _get_google_drive_folder(self, file_id = ''):
+        drive = self._initialize_drive()
+        if not file_id:
+            return drive.CreateFile()
+
+        return drive.CreateFile({'parents': [{'id': self.file_id}]})
 
 class GoogleDriveUploader(GoogleDriveLoader):
     """
@@ -109,7 +115,7 @@ class GoogleDriveUploader(GoogleDriveLoader):
 
         :return: None
         """
-        target_file = self._get_google_drive_file(self.file_id)
+        target_file = self._get_google_drive_folder(self.file_id)
         target_file.SetContentFile(self.target_filename)
         target_file['title'] = os.path.basename(self.target_filename)
         target_file.Upload()

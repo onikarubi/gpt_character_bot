@@ -3,15 +3,19 @@ from langchain.schema import messages_to_dict, messages_from_dict, AIMessage, Hu
 from langchain.chains import ConversationChain
 from langchain.prompts.chat import AIMessagePromptTemplate, ChatPromptTemplate, HumanMessagePromptTemplate, SystemMessagePromptTemplate, MessagesPlaceholder
 from langchain.memory import PostgresChatMessageHistory
-from apis.openai.gpt.langchains.memory.db_memory import POSTGRES_USER, POSTGRES_PORT, POSTGRES_PASSWORD, POSTGRES_HOST
 import json
 import os
 import pytest
 
 
 class TestChatMemoryPostgres:
+    DB_USER = os.getenv('POSTGRES_USER')
+    DB_PASSWORD = os.getenv('POSTGRES_PASSWORD')
+    DB_HOST = os.getenv('POSTGRES_HOST')
+    DB_PORT = os.getenv('POSTGRES_PORT')
+
     history = PostgresChatMessageHistory(
-        connection_string=f'postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}',
+        connection_string=f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}',
         session_id='test-session'
     )
 

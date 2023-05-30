@@ -4,47 +4,50 @@ from abc import ABCMeta, abstractstaticmethod
 import uvicorn
 import os
 
+
 class ChatToolService(metaclass=ABCMeta):
     @abstractstaticmethod
     def execute_service(self):
         pass
 
+
 class DriveToolService(ChatToolService):
+    DRIVE_ENVFILE_ID = os.getenv('DRIVE_ENVFILE_ID')
+    DRIVE_CHAT_TEMPLATEFILE_ID = os.getenv('DRIVE_CHAT_TEMPLATEFILE_ID')
+    DRIVE_UPLOAD_FOLDER_ID = os.getenv('DRIVE_UPLOAD_FOLDER_ID')
+
     def execute_service(self):
         print('Please select drive service\n')
         print('1, Upload local files to drive  2, download from drive folder')
         selector = int(input('select mode >> '))
+        drive_service = self._drive_config_service()
 
         if selector == 1:
-            self._chat_template_uploader()
+            drive_service.upload()
 
         elif selector == 2:
-            self._chat_template_downloader()
+            print(drive_service)
+            drive_service.download()
 
         else:
             print('Sorry please try again.')
 
-    def _chat_template_uploader(self):
-        print('1, .env file  2, other')
+    def _drive_config_service(self) -> GoogleDriveService:
+        print('1, .env file  2, chat_template_file  3, other')
         selector = int(input('select mode >> '))
+        if selector == 1:
+            target_filename = '.env'
+            file_id = self.DRIVE_ENVFILE_ID
 
-        if not selector == 1:
+        elif selector == 2:
+            target_filename = "apis/openai/gpt/templates/chat_template.csv"
+            file_id = self.DRIVE_CHAT_TEMPLATEFILE_ID
+
+        else:
             print('Sorry, we are in the process of preparing.')
+            return
 
-        drive = GoogleDriveService(
-        target_filename='.env',
-        file_id=os.getenv('DEFAULT_DRIVE_UPLOAD_FOLDER_ID')
-    )
-        drive.upload()
-
-    def _chat_template_downloader(self):
-        print('1, .env file  2, other')
-        selector = int(input('select mode >> '))
-        if not selector == 1:
-            print('Sorry, we are in the process of preparing.')
-
-        drive = GoogleDriveService(target_filename='.env', file_id=os.getenv('DRIVE_ENV_FILE_DOWNLOAD_ID'))
-        drive.download()
+        return GoogleDriveService(target_filename, file_id=file_id, folder_id=self.DRIVE_UPLOAD_FOLDER_ID)
 
 
 class ApplicationToolService(ChatToolService):
@@ -54,13 +57,14 @@ class ApplicationToolService(ChatToolService):
 
         if selector == 1:
             uvicorn.run('main:app', host='0.0.0.0', reload=True)
+
         elif selector == 2:
             self._chat_command_line(debug=True)
 
         else:
             self._chat_command_line()
 
-    def _chat_command_line(self, debug: bool=False):
+    def _chat_command_line(self, debug: bool = False):
         print('Lets take start!')
         question = input('user >> ')
         app = SearchQuestionAndAnswer(is_verbose=debug)
@@ -74,7 +78,7 @@ class ApplicationToolService(ChatToolService):
                 print('exit chat !!')
                 break
 
-
+""" CommandApplicationOperatorクラスに変更する """
 class ChatToolsController:
     tool_service: ChatToolService
 
@@ -93,4 +97,3 @@ class ChatToolsController:
             return
 
         self.tool_service.execute_service()
-

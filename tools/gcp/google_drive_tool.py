@@ -1,5 +1,6 @@
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive, GoogleDriveFile
+from abc import ABCMeta, abstractclassmethod
 import os
 
 class GoogleDriverAssist:
@@ -30,7 +31,7 @@ class GoogleDriverAssist:
         pass
 
 
-class GoogleDriveLoader:
+class GoogleDriveLoader(metaclass=ABCMeta):
     """
     GoogleDriveLoader is a base class for handling common functionalities among Google Drive services.
     """
@@ -81,32 +82,33 @@ class GoogleDriveLoader:
         self.g_auth.CommandLineAuth()
         return GoogleDrive(self._g_auth)
 
-    def _get_google_drive_file(self, file_id: str = '') -> GoogleDriveFile:
+    def _get_google_drive(self) -> GoogleDrive:
+        return self._initialize_drive()
+
+    def _get_google_drive_file(self) -> GoogleDriveFile:
         """
         Get a GoogleDriveFile object, either a new one or the one specified by file_id.
 
         :param file_id: id of the file on Google Drive (if known)
         :return: GoogleDriveFile object
         """
-        drive = self._initialize_drive()
-        if not file_id:
-            return drive.CreateFile()
+        pass
 
-        return drive.CreateFile({'id': file_id})
-
-    def _get_google_drive_folder(self, file_id = ''):
-        drive = self._initialize_drive()
-        if not file_id:
-            return drive.CreateFile()
-
-        return drive.CreateFile({'parents': [{'id': self.file_id}]})
 
 class GoogleDriveUploader(GoogleDriveLoader):
     """
     GoogleDriveUploader is a class for handling file uploads to Google Drive.
     """
-    def __init__(self, target_filename: str, file_id: str = None) -> None:
+    def __init__(self, target_filename: str, file_id: str = None, folder_id: str = None) -> None:
         super().__init__(target_filename, file_id)
+        self.folder_id = folder_id
+
+    def _get_google_drive_file(self) -> GoogleDriveFile:
+        drive = self._get_google_drive()
+        if not self.folder_id:
+            return drive.CreateFile({'id': self.file_id})
+
+        return drive.CreateFile({'parents': [{'id': self.folder_id}]})
 
     @GoogleDriverAssist.service_transaction
     def upload(self) -> None:
@@ -115,7 +117,7 @@ class GoogleDriveUploader(GoogleDriveLoader):
 
         :return: None
         """
-        target_file = self._get_google_drive_folder(self.file_id)
+        target_file = self._get_google_drive_file()
         target_file.SetContentFile(self.target_filename)
         target_file['title'] = os.path.basename(self.target_filename)
         target_file.Upload()
@@ -129,6 +131,10 @@ class GoogleDriveDownloader(GoogleDriveLoader):
     def __init__(self, target_filename: str, file_id: str = None) -> None:
         super().__init__(target_filename, file_id)
 
+    def _get_google_drive_file(self) -> GoogleDriveFile:
+        drive = self._get_google_drive()
+        return drive.CreateFile({'id': self.file_id})
+
     @GoogleDriverAssist.service_transaction
     def download(self):
         """
@@ -136,7 +142,7 @@ class GoogleDriveDownloader(GoogleDriveLoader):
 
         :return: None
         """
-        target_file = self._get_google_drive_file(file_id=self.file_id)
+        target_file = self._get_google_drive_file()
         target_file.GetContentFile(self.target_filename)
         print(f'{self.target_filename}ファイルのダウンロードが完了しました。')
 
@@ -145,8 +151,9 @@ class GoogleDriveService(GoogleDriveLoader):
     """
     GoogleDriveService is a class for providing high-level upload/download functionality using Google Drive.
     """
-    def __init__(self, target_filename: str, file_id: str = None) -> None:
+    def __init__(self, target_filename: str, file_id: str = None, folder_id: str = None) -> None:
         super().__init__(target_filename, file_id)
+        self.folder_id = folder_id
 
     def upload(self):
         """
@@ -156,7 +163,8 @@ class GoogleDriveService(GoogleDriveLoader):
         """
         uploader = GoogleDriveUploader(
             target_filename=self.target_filename,
-            file_id=self.file_id
+            file_id=self.file_id,
+            folder_id=self.folder_id
         )
         uploader.upload()
 
@@ -168,7 +176,7 @@ class GoogleDriveService(GoogleDriveLoader):
         """
         downloader = GoogleDriveDownloader(
             target_filename=self.target_filename,
-            file_id=self.file_id
+            file_id=self.file_id,
         )
         downloader.download()
 

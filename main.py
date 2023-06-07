@@ -4,8 +4,7 @@ from linebot.models import TextMessage, MessageEvent
 from apis.linebot.linebot import LineBotReplyText, LineBotHandler
 from apis.openai.gpt.conversion_bot import ConversionBotDefault, ConversationBotLangFlow
 from apis.openai.gpt.langchains.llm_chains import SearchQuestionAndAnswer
-from tools.tools import ChatToolsController
-from tools.gcp.google_drive_tool import GoogleDriveUploader
+from app.services.cli_services import CommandLineExecutor
 from logs.request_logger import logger_output
 import os
 
@@ -66,5 +65,5 @@ def handle_message_text(event: MessageEvent):
 
 
 if __name__ == '__main__':
-    controller = ChatToolsController()
-    controller.execute_controller()
+    cli_executor = CommandLineExecutor()
+    cli_executor.execute_cli()

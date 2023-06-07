@@ -2,8 +2,8 @@ from fastapi import FastAPI, Request, Response, status
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import TextMessage, MessageEvent
 from apis.linebot.linebot import LineBotReplyText, LineBotHandler
-from apis.openai.gpt.conversion_bot import ConversionBotDefault, ConversationBotLangFlow
 from apis.openai.gpt.langchains.llm_chains import SearchQuestionAndAnswer
+from apis.openai.gpt.conversion_bot import LangChainConversationChatApplication
 from app.services.cli_services import CommandLineExecutor
 from logs.request_logger import logger_output
 import os
@@ -18,7 +18,6 @@ line_bot_handler = LineBotHandler(
     api_token=LINE_BOT_API_TOKEN,
     api_secret=LINE_BOT_API_SECRET
 )
-
 
 @app.post('/callback')
 async def callback(request: Request):
@@ -43,8 +42,8 @@ async def callback(request: Request):
 
 
 def reply_message_text(event: MessageEvent):
-    conversion_character = ConversationBotLangFlow()
-    response_content = conversion_character(prompt=event.message.text)
+    conversion_character = LangChainConversationChatApplication(is_verbose=False)
+    response_content = conversion_character.run(prompt=event.message.text)
     reply_message = LineBotReplyText(
         api_token=LINE_BOT_API_TOKEN,
         api_secret=LINE_BOT_API_SECRET,

@@ -1,5 +1,5 @@
 from .gcp.google_drive_tool import GoogleDriveService
-from apis.openai.gpt.langchains.llm_chains import SearchQuestionAndAnswer
+from .chat.chat_application import ChatCommandLineApplication
 from abc import ABCMeta, abstractstaticmethod
 import uvicorn
 import os
@@ -51,6 +51,8 @@ class DriveToolService(CliService):
 
 
 class ApplicationService(CliService):
+    chat_cli: ChatCommandLineApplication
+
     def execute(self):
         print('1, start uvicorn server  2, start cli chat (debug mode)  3 or other, start chat cli')
         selector = int(input('select mode >> '))
@@ -59,24 +61,13 @@ class ApplicationService(CliService):
             uvicorn.run('main:app', host='0.0.0.0', reload=True)
 
         elif selector == 2:
-            self._chat_command_line(debug=True)
+            self.chat_cli = ChatCommandLineApplication(debug=True)
+            self.chat_cli.conversation()
 
         else:
-            self._chat_command_line()
+            self.chat_cli = ChatCommandLineApplication(debug=False)
+            self.chat_cli.conversation()
 
-    def _chat_command_line(self, debug: bool = False):
-        print('Lets take start!')
-        question = input('user >> ')
-        app = SearchQuestionAndAnswer(is_verbose=debug)
-
-        while True:
-            response = app.run(prompt=question)
-            print(response)
-            question = input('user >> ')
-
-            if question == 'exit':
-                print('exit chat !!')
-                break
 
 class CommandLineExecutor:
     cli_service: CliService

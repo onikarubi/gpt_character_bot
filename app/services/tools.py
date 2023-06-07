@@ -1,17 +1,17 @@
-from .gcp.google_drive_tool import GoogleDriveService
+from .tools.gcp.google_drive_tool import GoogleDriveService
 from apis.openai.gpt.langchains.llm_chains import SearchQuestionAndAnswer
 from abc import ABCMeta, abstractstaticmethod
 import uvicorn
 import os
 
 
-class ChatToolService(metaclass=ABCMeta):
+class CliServices(metaclass=ABCMeta):
     @abstractstaticmethod
     def execute_service(self):
         pass
 
 
-class DriveToolService(ChatToolService):
+class DriveToolService(CliServices):
     DRIVE_ENVFILE_ID = os.getenv('DRIVE_ENVFILE_ID')
     DRIVE_CHAT_TEMPLATEFILE_ID = os.getenv('DRIVE_CHAT_TEMPLATEFILE_ID')
     DRIVE_UPLOAD_FOLDER_ID = os.getenv('DRIVE_UPLOAD_FOLDER_ID')
@@ -50,7 +50,7 @@ class DriveToolService(ChatToolService):
         return GoogleDriveService(target_filename, file_id=file_id, folder_id=self.DRIVE_UPLOAD_FOLDER_ID)
 
 
-class ApplicationToolService(ChatToolService):
+class ApplicationService(ChatService):
     def execute_service(self):
         print('1, start uvicorn server  2, start cli chat (debug mode)  3 or other, start chat cli')
         selector = int(input('select mode >> '))
@@ -78,16 +78,15 @@ class ApplicationToolService(ChatToolService):
                 print('exit chat !!')
                 break
 
-""" CommandApplicationOperatorクラスに変更する """
-class ChatToolsController:
-    tool_service: ChatToolService
+class CommandLineExecutor:
+    tool_service: CliServices
 
     def execute_controller(self):
         print('1, application start  2, drive tool  3, exit cli')
         selector = int(input('select mode >> '))
 
         if selector == 1:
-            self.tool_service = ApplicationToolService()
+            self.tool_service = ApplicationService()
 
         elif selector == 2:
             self.tool_service = DriveToolService()

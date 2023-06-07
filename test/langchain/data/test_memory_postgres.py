@@ -34,7 +34,7 @@ class TestChatMemoryPostgres:
             else:
                 raise TypeError
 
-    """ 
+    """
     テストデータを削除する
     """
     def test_clean_data(self):

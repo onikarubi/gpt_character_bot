@@ -9,5 +9,3 @@ class TestPostgresChatHistory:
         connect_db = f'{self.target_history_object.database_name}://{os.getenv("POSTGRES_USER")}:{os.getenv("POSTGRES_PASSWORD")}@{os.getenv("POSTGRES_HOST")}:{os.getenv("POSTGRES_PORT")}'
         test_history = PostgresChatMessageHistory(session_id=self.target_history_object.session_id, connection_string=connect_db)
         assert test_history.messages == self.target_history_object.load_history().messages
-
-    

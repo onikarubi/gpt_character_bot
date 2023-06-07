@@ -1,4 +1,4 @@
-from apis.openai.gpt.langchains.llm_chains import SearchQuestionAndAnswer
+from apis.openai.gpt.conversion_bot import LangChainConversationChatApplication, ConversationChatBot
 from abc import ABCMeta, abstractclassmethod
 
 class ChatApplication(metaclass=ABCMeta):
@@ -14,13 +14,15 @@ class ChatApplication(metaclass=ABCMeta):
 
 
 class ChatCommandLineApplication(ChatApplication):
+    open_ai_api_app: ConversationChatBot
+
     def __init__(self, debug: bool) -> None:
         super().__init__()
+        self.open_ai_api_app = LangChainConversationChatApplication(is_verbose=debug)
         self.debug = debug
 
     def run(self, prompt: str='') -> str:
-        app = SearchQuestionAndAnswer(is_verbose=self.debug)
-        return app.run(prompt)
+        return self.open_ai_api_app.run(prompt=prompt)
 
     def conversation(self) -> None:
         question = input('user >> ')

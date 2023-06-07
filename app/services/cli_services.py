@@ -7,7 +7,7 @@ import os
 
 class CliService(metaclass=ABCMeta):
     @abstractstaticmethod
-    def execute_service(self):
+    def execute(self):
         pass
 
 
@@ -16,7 +16,7 @@ class DriveToolService(CliService):
     DRIVE_CHAT_TEMPLATEFILE_ID = os.getenv('DRIVE_CHAT_TEMPLATEFILE_ID')
     DRIVE_UPLOAD_FOLDER_ID = os.getenv('DRIVE_UPLOAD_FOLDER_ID')
 
-    def execute_service(self):
+    def execute(self):
         print('Please select drive service\n')
         print('1, Upload local files to drive  2, download from drive folder')
         selector = int(input('select mode >> '))
@@ -51,7 +51,7 @@ class DriveToolService(CliService):
 
 
 class ApplicationService(CliService):
-    def execute_service(self):
+    def execute(self):
         print('1, start uvicorn server  2, start cli chat (debug mode)  3 or other, start chat cli')
         selector = int(input('select mode >> '))
 
@@ -95,4 +95,4 @@ class CommandLineExecutor:
             print('exit cli')
             return
 
-        self.cli_service.execute_service()
+        self.cli_service.execute()

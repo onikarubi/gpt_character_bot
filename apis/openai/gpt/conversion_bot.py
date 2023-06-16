@@ -1,4 +1,4 @@
-from .langchains.llm_chains import SearchQuestionAndAnswer
+from .langchains.llm_chains import ConversationAgentChat
 from abc import ABCMeta, abstractclassmethod
 import os
 
@@ -26,7 +26,7 @@ class ConversationChatBot(metaclass=ABCMeta):
 class LangChainConversationChatApplication(ConversationChatBot):
     def __init__(self, prompt: str = '', is_verbose: bool = False) -> None:
         super().__init__(prompt, is_verbose)
-        self.conversation_app = SearchQuestionAndAnswer(
+        self.conversation_app = ConversationAgentChat(
             question_prompt=self.prompt,
             is_verbose=self.is_verbose
         )

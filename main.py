@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, Response, status
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import TextMessage, MessageEvent
 from apis.linebot.linebot import LineBotReplyText, LineBotHandler
-from apis.openai.gpt.langchains.llm_chains import SearchQuestionAndAnswer
+from apis.openai.gpt.langchains.llm_chains import ConversationAgentChat
 from apis.openai.gpt.conversion_bot import LangChainConversationChatApplication
 from app.services.cli_services import CommandLineExecutor
 from logs.request_logger import logger_output
@@ -18,6 +18,11 @@ line_bot_handler = LineBotHandler(
     api_token=LINE_BOT_API_TOKEN,
     api_secret=LINE_BOT_API_SECRET
 )
+
+@app.get('/')
+async def get_request_url():
+    return {'status': 'success'}
+
 
 @app.post('/callback')
 async def callback(request: Request):

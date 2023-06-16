@@ -15,6 +15,7 @@ from langchain.prompts.chat import (
     AIMessagePromptTemplate,
     BaseStringMessagePromptTemplate,
     BaseMessagePromptTemplate,
+    MessagesPlaceholder
 )
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.utilities import SerpAPIWrapper, GoogleSerperAPIWrapper
@@ -25,6 +26,7 @@ from asyncio import Task
 import asyncio
 import datetime
 import os
+import abc
 
 
 class ChatModel:
@@ -133,8 +135,13 @@ class ChatPromptTemplateGenerator:
     ) -> None:
         self.messages_template.append(msg_pmt_temp.from_template(prompt))
 
+    def add_messages_placeholder(self, variable_name: str) -> None:
+        messages_placeholder = MessagesPlaceholder(variable_name=variable_name)
+        self.messages_template.append(messages_placeholder)
+
     def get_chat_prompt_template(self) -> ChatPromptTemplate:
         return ChatPromptTemplate.from_messages(self.messages_template)
+
 
     @property
     def messages_template(self) -> list[BaseStringMessagePromptTemplate]:
@@ -207,8 +214,36 @@ class ConversationAgents:
     def add_tool(self, tool: Tool):
         self.tools.append(tool)
 
+class ConversationChat(metaclass=abc.ABCMeta):
+    def __init__(self, prompt: str='', is_verbose: bool=False) -> None:
+        self.prompt = prompt
+        self.is_verbose = is_verbose
 
-class SearchQuestionAndAnswer:
+    @abc.abstractclassmethod
+    def run(self, prompt: str='') -> str:
+        if not self.prompt:
+            self.prompt = prompt
+
+
+class ConversationChainChat(ConversationChat):
+    MEMORY_KEY = 'chat_history'
+
+    def __init__(self, prompt: str = '', is_verbose: bool = False) -> None:
+        super().__init__(prompt, is_verbose)
+        self.chat_model = ChatModel(temperature=0, max_tokens=500, is_streaming=True).create_chat()
+        self.chat_template_generator = ChatPromptTemplateGenerator()
+        self.chat_template_generator.add_messages_placeholder(variable_name=self.MEMORY_KEY)
+        self.chat_memory = ConversationMemory(memory_key=self.MEMORY_KEY, return_messages=True).buffer_memory()
+
+    def run(self, prompt: str='') -> str:
+        self.chat_template_generator.add_messages_template(HumanMessagePromptTemplate, '{input}')
+        prompt_template = self.chat_template_generator.get_chat_prompt_template()
+        llm_chain = ConversationChain(llm=self.chat_model, memory=self.chat_memory, prompt=prompt_template, verbose=self.is_verbose)
+        response = llm_chain.predict(input=prompt)
+        print(self.chat_memory.chat_memory)
+        return response
+
+class ConversationAgentChat:
     """
     質問に対する回答を検索し、指定された言語に翻訳するクラス。
     """

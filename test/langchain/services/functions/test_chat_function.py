@@ -1,84 +1,61 @@
-import os
-import openai
+import json
 import logging
+import os
+from enum import Enum
+from typing import Optional, Type
+
+from pydantic import BaseModel, Field
+
+from langchain.agents import AgentType, initialize_agent
+from langchain.agents.tools import BaseTool
+from langchain.chat_models import ChatOpenAI
+import openai
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
 
+class WeatherUnit(str, Enum):
+    celsius = 'celsius'
+    fahrenheit = 'fahrenheit'
+
+
+class GetCurrentWeatherCheckInput(BaseModel):
+    location: str = Field(..., description='city_and_state')
+    unit: WeatherUnit
+
+
+class GetCurrentWeatherTool(BaseTool):
+    name = 'get_current_weather'
+    description = 'Specified location current weather acquisition.'
+
+    def _run(self, location: str, unit: str = 'fahrenheit'):
+        weather_info = {
+            "location": location,
+            "temperature": "72",
+            "unit": unit,
+            "forecast": ["sunny", "windy"],
+        }
+        return json.dumps(weather_info)
+
+    def _arun(self, location: str, unit: str):
+        raise NotImplementedError("This tool does not support async")
+
+    args_schema: Optional[Type[BaseModel]] = GetCurrentWeatherCheckInput
+
+
 class TestChatFunction:
-    @classmethod
-    def setup(cls):
-        cls.__OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-        openai.api_key = cls.__OPENAI_API_KEY
+    def setup(self):
+        openai_api_key = os.getenv('OPENAI_API_KEY')
+        openai.api_key = openai_api_key
 
-        cls.greeting_functions = [
-            {
-                "name": "greeting",
-                "description": "return greeting",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "name": {
-                            "type": "string",
-                            "description": "The name of the person to greet"
-                        }
-                    },
-                    "required": ["name"],
-                },
-            }
-        ]
+        self.model = ChatOpenAI(model='gpt-3.5-turbo-0613', temperature=0)
+        self.tools = [GetCurrentWeatherTool()]
+        self.agent = initialize_agent(tools=self.tools, llm=self.model, agent=AgentType.OPENAI_FUNCTIONS, verbose=True)
 
-        cls.sample_method_functions = [
-            {
-                "name": "print_hello",
-                "description": "print hello",
-                "parameters": {
-                    "type": "object",
-                    "properties": "null"
-                }
-            }
-        ]
+    def test_get_current_weather_function(self, request='こんにちは、元気ですか？'):
+        response = self.agent.run(request)
+        logging.debug(response)
 
-    def test_call_function(self):
-        def print_hello_method():
-            input_name = input('名前を入力してください >> ')
-            print('Hello {}!!'.format(input_name))
 
-        response = openai.ChatCompletion.create(
-            model='gpt-3.5-turbo-0613',
-            messages=[{"role": "user", "content": "pass"}],
-            functions=self.greeting_functions,
-            function_call="auto",
-        )
-        message = response["choices"][0]["message"]
-        logging.debug(message)
-        if message.get('function_call'):
-            print_hello_method()
-
-    # def test_call_greeting(self):
-    #     def greeting(name):
-    #         return f'私の名前は{name}です'
-
-    #     response = openai.ChatCompletion.create(
-    #         model='gpt-3.5-turbo-0613',
-    #         messages=[{"role": "user", "content": "こんにちは"}],
-    #         functions=self.greeting_functions,
-    #         function_call="auto",
-    #     )
-    #     message = response["choices"][0]["message"]
-    #     # print("message>>>\n", message, "\n\n")
-
-    #     if message.get('function_call'):
-    #         function_name = message['function_call']['name']
-    #         function_response = greeting('onikarubi')
-    #         second_message = openai.ChatCompletion.create(
-    #             model='gpt-3.5-turbo-0613',
-    #             messages=[
-    #                 {'role': 'user', 'content': '挨拶をしてくれますか？'},
-    #                 {'role': 'function', 'name': function_name, 'content': function_response},
-    #             ]
-    #         )
-
-    #         print("response>>>\n", second_message['choices'][0]["message"]["content"], '\n\n')
 
     # def test_get_current_weather_function(self):
     #     def get_current_weather(location, unit="fahrenheit"):

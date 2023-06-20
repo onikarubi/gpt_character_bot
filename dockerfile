@@ -14,8 +14,8 @@ ENV TZ JST-9
 ENV TERM xterm
 
 COPY requirements.txt .
-RUN pip install --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip && \
+    pip install --upgrade -r requirements.txt
 RUN rm requirements.txt
 
 WORKDIR /products

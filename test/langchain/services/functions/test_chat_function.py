@@ -51,7 +51,11 @@ class TestChatFunction:
         self.tools = [GetCurrentWeatherTool()]
         self.agent = initialize_agent(tools=self.tools, llm=self.model, agent=AgentType.OPENAI_FUNCTIONS, verbose=True)
 
-    def test_get_current_weather_function(self, request='こんにちは、元気ですか？'):
+    def test_get_current_weather_function(self, request='東京の天気について教えてくれますか？'):
+        response = self.agent.run(request)
+        logging.debug(response)
+
+    def test_call_greeting(self, request='こんにちは、元気ですか？'):
         response = self.agent.run(request)
         logging.debug(response)
 

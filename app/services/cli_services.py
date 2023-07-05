@@ -70,7 +70,7 @@ class ApplicationService(CliService):
             self.chat_cli.conversation()
 
         elif selector == 4:
-            subprocess.call(['streamlit', 'run', 'app/ui/chat.py', '--server.port=8000', '--server.address=0.0.0.0'])
+            subprocess.call(['streamlit', 'run', 'chat.py', '--server.port=8000', '--server.address=0.0.0.0'])
 
 
 class CommandLineExecutor:

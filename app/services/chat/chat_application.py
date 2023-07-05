@@ -1,4 +1,4 @@
-from apis.openai.gpt.conversion_bot import LangChainConversationChatApplication, ConversationChatBot
+from app.apis.openai.gpt.conversion_bot import LangChainConversationChatApplication, ConversationChatBot
 from abc import ABCMeta, abstractclassmethod
 
 class ChatApplication(metaclass=ABCMeta):

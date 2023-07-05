@@ -3,6 +3,7 @@ from .chat.chat_application import ChatCommandLineApplication
 from abc import ABCMeta, abstractstaticmethod
 import uvicorn
 import os
+import subprocess
 
 
 class CliService(metaclass=ABCMeta):
@@ -54,7 +55,7 @@ class ApplicationService(CliService):
     chat_cli: ChatCommandLineApplication
 
     def execute(self):
-        print('1, start uvicorn server  2, start cli chat (debug mode)  3 or other, start chat cli')
+        print('1, start uvicorn server  2, start cli chat (debug)  3, chat cli 4, streamlit app start')
         selector = int(input('select mode >> '))
 
         if selector == 1:
@@ -64,9 +65,12 @@ class ApplicationService(CliService):
             self.chat_cli = ChatCommandLineApplication(debug=True)
             self.chat_cli.conversation()
 
-        else:
+        elif selector == 3:
             self.chat_cli = ChatCommandLineApplication(debug=False)
             self.chat_cli.conversation()
+
+        elif selector == 4:
+            subprocess.call(['streamlit', 'run', 'app/ui/chat.py', '--server.port=8000', '--server.address=0.0.0.0'])
 
 
 class CommandLineExecutor:

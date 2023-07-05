@@ -308,7 +308,6 @@ class ConversationAgentChat:
             logger_output(output_filename='openai_access', level='error', message='エラーが発生したため処理を中断しました。')
             self._running_exception_msg('API', reason=e)
 
-        # logger_output(level='info', message=response, output_filename='openai_access')
         return response
 
     def _thinking_task(self) -> str:
@@ -325,7 +324,6 @@ class ConversationAgentChat:
         try:
             agent_answer = f'{self.question_prompt}'
             result_output = self.agent_chain.run(input=agent_answer)
-            # logger_output(output_filename='openai_access', level='info', message=result_output)
             return result_output
 
         except Exception as e:

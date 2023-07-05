@@ -1,8 +1,8 @@
 from fastapi import FastAPI, Request, Response, status
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import TextMessage, MessageEvent
-from apis.linebot.linebot import LineBotReplyText, LineBotHandler
-from apis.openai.gpt.conversion_bot import LangChainConversationChatApplication
+from app.apis.linebot.linebot import LineBotReplyText, LineBotHandler
+from app.apis.openai.gpt.conversion_bot import LangChainConversationChatApplication
 from app.services.cli_services import CommandLineExecutor
 from logs.request_logger import logger_output
 import os

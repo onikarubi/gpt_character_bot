@@ -9,6 +9,5 @@ google-search-results
 PyDrive2
 poe-api
 streamlit
-streamlit-chat
 psycopg
 pytest

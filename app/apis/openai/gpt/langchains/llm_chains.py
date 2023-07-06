@@ -215,9 +215,21 @@ class ConversationAgents:
         self.tools.append(tool)
 
 class ConversationChat(metaclass=abc.ABCMeta):
-    def __init__(self, prompt: str='', is_verbose: bool=False) -> None:
+    memory_key: str
+
+    def __init__(self, prompt: str='', is_verbose: bool=False, is_streaming: bool = True) -> None:
         self.prompt = prompt
         self.is_verbose = is_verbose
+        self.is_streaming = is_streaming
+        self.chat_model = self._create_chat_model()
+
+    def _create_chat_model(self, temperature: float = 0, max_tokens: int = 500):
+        chat_model = ChatModel(temperature=temperature, max_tokens=max_tokens, is_streaming=self.is_streaming)
+        return chat_model.create_chat()
+
+    def _create_chat_memory(self, memory_key: str):
+        chat_memory = ConversationMemory(memory_key=memory_key, return_messages=True)
+        return chat_memory.buffer_memory()
 
     @abc.abstractclassmethod
     def run(self, prompt: str='') -> str:
@@ -226,14 +238,13 @@ class ConversationChat(metaclass=abc.ABCMeta):
 
 
 class ConversationChainChat(ConversationChat):
-    MEMORY_KEY = 'chat_history'
-
-    def __init__(self, prompt: str = '', is_verbose: bool = False) -> None:
-        super().__init__(prompt, is_verbose)
-        self.chat_model = ChatModel(temperature=0, max_tokens=500, is_streaming=True).create_chat()
+    def __init__(self, prompt: str = '', is_verbose: bool = False, is_streaming: bool = True) -> None:
+        super().__init__(prompt, is_verbose, is_streaming)
+        self.memory_key = 'chat_history'
+        self.chat_memory = self._create_chat_memory(self.memory_key)
         self.chat_template_generator = ChatPromptTemplateGenerator()
-        self.chat_template_generator.add_messages_placeholder(variable_name=self.MEMORY_KEY)
-        self.chat_memory = ConversationMemory(memory_key=self.MEMORY_KEY, return_messages=True).buffer_memory()
+        self.chat_template_generator.add_messages_placeholder(
+            variable_name=self.memory_key)
 
     def run(self, prompt: str='') -> str:
         self.chat_template_generator.add_messages_template(HumanMessagePromptTemplate, '{input}')

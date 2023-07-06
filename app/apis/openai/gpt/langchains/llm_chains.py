@@ -251,7 +251,6 @@ class ConversationChainChat(ConversationChat):
         prompt_template = self.chat_template_generator.get_chat_prompt_template()
         llm_chain = ConversationChain(llm=self.chat_model, memory=self.chat_memory, prompt=prompt_template, verbose=self.is_verbose)
         response = llm_chain.predict(input=prompt)
-        print(self.chat_memory.chat_memory)
         return response
 
 class ConversationAgentChat:

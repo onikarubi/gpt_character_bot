@@ -23,10 +23,11 @@ class ConversationChatBot(ConversationChatApplication):
         response = self.conversation_app.run(prompt)
         return response
 
+
 class LangChainConversationChatApplication(ConversationChatBot):
     def __init__(self, prompt: str = '', is_verbose: bool = False) -> None:
         super().__init__(prompt, is_verbose)
         self.conversation_app = ConversationAgentChat(
-            question_prompt=self.prompt,
+            question_prompt=self.prompt
             is_verbose=self.is_verbose
         )

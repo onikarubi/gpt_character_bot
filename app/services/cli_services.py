@@ -41,7 +41,7 @@ class DriveToolService(CliService):
             file_id = self.DRIVE_ENVFILE_ID
 
         elif selector == 2:
-            target_filename = "apis/openai/gpt/templates/chat_template.csv"
+            target_filename = os.getenv('CHAT_TEMPLATE_PATH')
             file_id = self.DRIVE_CHAT_TEMPLATEFILE_ID
 
         else:

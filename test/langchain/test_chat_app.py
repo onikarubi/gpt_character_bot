@@ -1,17 +1,21 @@
-# from apis.openai.gpt.langchains.llm_chains import ConversationChainChat
+from app.apis.openai.gpt.langchains.llm_chains import ConversationChainChat
+import pytest
 
-# class TestConversationChainChat:
-#     chat = ConversationChainChat(is_verbose=True)
+is_chat_test = False
 
-#     def test_conversation_chain_chat(self):
-#         input_prompt = input('user（Test） >> ')
+class TestConversationChainChat:
+    chat = ConversationChainChat(is_verbose=True)
 
-#         while True:
-#             response = self.chat.run(input_prompt)
-#             print(response)
-#             input_prompt = input('user（Test） >> ')
+    @pytest.mark.skipif(is_chat_test == False, reason='Only when testing chat')
+    def test_conversation_chain_chat(self):
+        input_prompt = input('user（Test） >> ')
 
-#             if input_prompt == 'exit':
-#                 break
+        while True:
+            response = self.chat.run(input_prompt)
+            print(response)
+            input_prompt = input('user（Test） >> ')
+
+            if input_prompt == 'exit':
+                break
 
 

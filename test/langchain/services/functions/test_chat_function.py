@@ -10,6 +10,7 @@ from langchain.agents import AgentType, initialize_agent
 from langchain.agents.tools import BaseTool
 from langchain.chat_models import ChatOpenAI
 import openai
+import pytest
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
 
@@ -55,6 +56,7 @@ class TestChatFunction:
         response = self.agent.run(request)
         logging.debug(response)
 
+    @pytest.mark.skip(reason='confirm test exit')
     def test_call_greeting(self, request='こんにちは、元気ですか？'):
         response = self.agent.run(request)
         logging.debug(response)

@@ -1,4 +1,4 @@
-from apis.openai.gpt.langchains.memory.database_chat_history import PostgresChatHistory
+from app.apis.openai.gpt.langchains.memory.database_chat_history import PostgresChatHistory
 from langchain.memory import PostgresChatMessageHistory
 import os
 

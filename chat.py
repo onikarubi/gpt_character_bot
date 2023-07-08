@@ -1,6 +1,4 @@
 import streamlit as st
-from app.apis.openai.gpt.conversion_bot import LangChainConversationChatApplication
-
 st.title("ChatGPT-like clone")
 
 # Set a default model
@@ -14,7 +12,3 @@ if "messages" not in st.session_state:
 for message in st.session_state.messages:
     with st.chat_message(message['role']):
         st.markdown(message['content'])
-
-app = LangChainConversationChatApplication()
-
-

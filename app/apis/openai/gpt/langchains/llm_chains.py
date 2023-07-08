@@ -1,3 +1,5 @@
+from typing import Any, Optional
+from uuid import UUID
 from langchain.agents import (
     AgentType,
     initialize_agent,
@@ -9,30 +11,75 @@ from openai.error import APIError, AuthenticationError
 from langchain.chat_models import ChatOpenAI
 from langchain.prompts.chat import HumanMessagePromptTemplate
 from langchain.chains import LLMChain, ConversationChain
-from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.utilities import SerpAPIWrapper, GoogleSerperAPIWrapper
 from app.apis.openai.gpt.langchains.prompts.prompt_generator import ChatPromptTemplateGenerator
 from .models.chat_model import ChatModel
 from app.apis.openai.gpt.langchains.memory.memory import ConversationMemory
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+from langchain.callbacks.base import BaseCallbackHandler
 from logs.request_logger import logger_output
 from asyncio import Task
 import asyncio
 import datetime
 import abc
 
+class StreamDisplayHandler(BaseCallbackHandler):
+    def __init__(self, container, initial_text="", display_method ='markdown') -> None:
+        self.container = container
+        self.text = initial_text
+        self.display_method = display_method
+        self.new_sentence = ''
+
+    def on_llm_new_token(self, token: str, *, run_id: UUID, parent_run_id: UUID | None = None, **kwargs: Any) -> Any:
+        self.text += token
+        self.new_sentence += token
+
+        display_function = getattr(self.container, self.display_method, None)
+
+        if display_function is not None:
+            display_function(self.text)
+
+        else:
+            raise ValueError
+
+
 
 class ConversationChat(metaclass=abc.ABCMeta):
     memory_key: str
 
-    def __init__(self, prompt: str = '', is_verbose: bool = False, is_streaming: bool = True) -> None:
+    def __init__(self, prompt: str = '', is_verbose: bool = False, is_streaming: bool = True, display_streaming = 'cli', display_container = None) -> None:
         self.prompt = prompt
         self.is_verbose = is_verbose
         self.is_streaming = is_streaming
-        self.chat_model = self._create_chat_model()
 
-    def _create_chat_model(self, temperature: float = 0, max_tokens: int = 500):
+        if self.is_streaming:
+            self.display_streaming = display_streaming
+            self.display_container = display_container
+
+    def _create_chat_model(self, temperature: float = 0, max_tokens: int = 500) -> ChatOpenAI:
+        if not self.is_streaming:
+            chat_model = ChatModel(
+                is_streaming=False,
+                temperature=temperature,
+                max_tokens=max_tokens
+            )
+            return chat_model.create_chat()
+
+        if self.display_streaming == 'cli':
+            callbacks = [StreamingStdOutCallbackHandler()]
+
+        elif self.display_streaming == 'gui':
+            handler = StreamDisplayHandler(self.display_container)
+            callbacks = [handler]
+
+        else:
+            raise ValueError
+
         chat_model = ChatModel(
-            temperature=temperature, max_tokens=max_tokens, is_streaming=self.is_streaming)
+            temperature=temperature,
+            max_tokens=max_tokens,
+            callbacks=callbacks,
+        )
         return chat_model.create_chat()
 
     def _create_chat_memory(self, memory_key: str):
@@ -46,9 +93,10 @@ class ConversationChat(metaclass=abc.ABCMeta):
             self.prompt = prompt
 
 class ConversationChainChat(ConversationChat):
-    def __init__(self, prompt: str = '', is_verbose: bool = False, is_streaming: bool = True) -> None:
-        super().__init__(prompt, is_verbose, is_streaming)
+    def __init__(self, prompt: str = '', is_verbose: bool = False, is_streaming: bool = True, display_streaming='cli', display_container=None) -> None:
+        super().__init__(prompt, is_verbose, is_streaming, display_streaming, display_container)
         self.memory_key = 'chat_history'
+        self.chat_model = self._create_chat_model()
         self.chat_memory = self._create_chat_memory(self.memory_key)
         self.chat_template_generator = ChatPromptTemplateGenerator()
         self.chat_template_generator.add_messages_placeholder(

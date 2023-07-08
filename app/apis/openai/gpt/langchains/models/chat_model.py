@@ -1,9 +1,9 @@
 from langchain.chat_models import ChatOpenAI
-from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+from langchain.callbacks.base import BaseCallbackHandler
 
 class ChatModel:
     def __init__(
-        self, temperature: float = 0, max_tokens: int = 100, is_streaming: bool = False
+        self, temperature: float = 0, max_tokens: int = 100, is_streaming: bool = True, callbacks: list[BaseCallbackHandler] = None
     ) -> None:
         if not max_tokens > 0:
             raise ValueError("トークン数を0 < n <= 500の範囲内で指定してください")
@@ -11,15 +11,11 @@ class ChatModel:
         self._temperature = temperature
         self._max_tokens = max_tokens
         self._is_streaming = is_streaming
+        self._callbacks = callbacks
 
-    def __call__(
-        self, temperature: float, max_tokens: int, is_streaming: bool = False
-    ) -> ChatOpenAI:
-        self.temperature = temperature
-        self.max_tokens = max_tokens
-        self.is_streaming = is_streaming
-
-        return self.create_chat()
+        if not self._is_streaming:
+            if not self._callbacks or not len(self._callbacks) > 0:
+                raise ValueError('callback is empty function')
 
     def create_chat(self) -> ChatOpenAI:
         if not self.is_streaming:
@@ -27,9 +23,9 @@ class ChatModel:
 
         else:
             return ChatOpenAI(
-                temperature=self.temperature,
-                max_tokens=self.max_tokens,
-                callbacks=[StreamingStdOutCallbackHandler()],
+                temperature=self._temperature,
+                max_tokens=self._max_tokens,
+                callbacks=self._callbacks,
                 streaming=True,
             )
 

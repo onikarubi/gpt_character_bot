@@ -1,5 +1,7 @@
-from app.apis.openai.gpt.conversion_bot import LangChainConversationChatApplication, ConversationChatBot
+from app.apis.openai.gpt.conversion_bot import ConversationChatBot, ConversationChat
 from abc import ABCMeta, abstractclassmethod
+
+from app.apis.openai.gpt.langchains.llm_chains import ConversationChainChat
 
 class ChatApplication(metaclass=ABCMeta):
     debug: bool = False
@@ -18,7 +20,7 @@ class ChatCommandLineApplication(ChatApplication):
 
     def __init__(self, debug: bool) -> None:
         super().__init__()
-        self.open_ai_api_app = LangChainConversationChatApplication(is_verbose=debug)
+        self.open_ai_api_app = ConversationChatBot()
         self.debug = debug
 
     def run(self, prompt: str='') -> str:
